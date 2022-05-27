@@ -1,6 +1,7 @@
 package rmq
 
 import (
+	"fmt"
 	"log"
 	"runtime"
 
@@ -29,7 +30,7 @@ func NewService(exchanges ...string) (mS MessagingService) {
 	for i := 0; i < runtime.NumCPU(); i++ {
 		q := mS.newQueue()
 		for _, e := range exchanges {
-			mS.bindQueue(q, e)
+			mS.bindQueue(q, e, i)
 		}
 	}
 
@@ -71,25 +72,25 @@ func (mS MessagingService) newExchange(exchange string) {
 	}
 }
 
-func (mS MessagingService) bindQueue(queue string, exchange string) {
+func (mS MessagingService) bindQueue(queue string, exchange string, index int) {
 	err := mS.ch.QueueBind(
-		queue,    // queue name
-		"",       // routing key
-		exchange, // exchange
-		false,    // no-wait
-		nil,      // arguments
+		queue,             // queue name
+		fmt.Sprint(index), // routing key
+		exchange,          // exchange
+		false,             // no-wait
+		nil,               // arguments
 	)
 	if err != nil {
 		log.Fatalf("couldn't declare a RabbitMQ exchange: %s", err.Error())
 	}
 }
 
-func (mS MessagingService) Publish(msg protoreflect.ProtoMessage, exchange string) error {
+func (mS MessagingService) Publish(id string, msg protoreflect.ProtoMessage, exchange string) error {
 	err := mS.ch.Publish(
-		exchange, // exchange
-		"",       // routing key
-		false,    // mandatory
-		false,    // immediate
+		exchange,                   // exchange
+		fmt.Sprint(queueIndex(id)), // routing key
+		false,                      // mandatory
+		false,                      // immediate
 		amqp.Publishing{
 			ContentType: "text/plain",
 			Body:        wrap(msg),
@@ -122,9 +123,10 @@ func (mS MessagingService) Consume() {
 			}
 
 			for msg := range msgs {
-				any := unwrap(msg.Body)
-				if handler, ok := mS.handlers[any.TypeUrl]; ok {
-					handler(any.GetValue())
+				if any, err := unwrap(msg.Body); err == nil {
+					if handler, ok := mS.handlers[any.TypeUrl]; ok {
+						handler(any.GetValue())
+					}
 				}
 			}
 		}(q.Name)

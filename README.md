@@ -77,7 +77,7 @@ func main() {
     )
 
     // Consume messages
-	service.Consume()
+    service.Consume()
 }
 ```
 

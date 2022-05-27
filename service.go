@@ -6,6 +6,7 @@ import (
 	"runtime"
 	"strconv"
 
+	"github.com/google/uuid"
 	"github.com/streadway/amqp"
 	"google.golang.org/protobuf/reflect/protoreflect"
 	"google.golang.org/protobuf/types/known/anypb"
@@ -86,7 +87,12 @@ func (mS MessagingService) bindQueue(queue string, exchange string, index int) {
 	}
 }
 
-func (mS MessagingService) Publish(id string, msg protoreflect.ProtoMessage, exchange string) error {
+func (mS MessagingService) Publish(msg protoreflect.ProtoMessage, exchange string) error {
+	err := mS.PublishRouted(uuid.NewString(), msg, exchange)
+	return err
+}
+
+func (mS MessagingService) PublishRouted(id string, msg protoreflect.ProtoMessage, exchange string) error {
 	err := mS.ch.Publish(
 		exchange,                   // exchange
 		fmt.Sprint(queueIndex(id)), // routing key

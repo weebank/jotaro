@@ -4,38 +4,83 @@ This service allows microservices through the backend to implement RabbitMQ mess
 
 ## Example
 
+Messages are defined in Protobuf files. In this example, let's use three `.proto` files. They are:
+
+```protobuf
+// ./pb/spider.proto
+syntax="proto3";
+
+package main;
+option go_package = "./pb";
+
+message Spider {
+    string poison = 1;
+}
+```
+
+```protobuf
+// ./pb/banana.proto
+syntax="proto3";
+
+package main;
+option go_package = "./pb";
+
+message Banana {
+    float yellowness = 1;
+}
+```
+
+```protobuf
+// ./pb/cow.proto
+syntax="proto3";
+
+package main;
+option go_package = "./pb";
+
+message Banana {
+    bool milk = 1;
+}
+```
+
+> Remember to compile Protobuf files with `protoc --go_out=. pb/*.proto`
+
+Now, on the main Go file, we can write a service like this:
+
 ```go
+// ./main.go
+
 func main() {
-    // Connect to RabbitMQ
-    conn := rmq.NewConnection()
+    // Create service and define exchanges
+	service := rmq.NewService("fruits", "insects")
 
-    // Declare exchange name
-    exc := "capybara"
-    conn.NewExchange(exc)
+    // Bind handler for "Banana"
+	service.Bind(&pb.Banana{},
+        func(bytes []byte, index int) {
+            banana := &pb.Banana{}
+            proto.Unmarshal(bytes, banana)
 
-    // Declare queue
-    q := conn.NewQueue()
-    conn.Bind(q, exc)
+            fmt.Println("banana received", "yellowness:", banana.Yellowness, "index:", index)
+        },
+    )
 
-    // Consume queue
-    msgs, _ := conn.Consume(q)
+    // Bind handler for "Spider"
+    service.Bind(&pb.Spider{},
+        func(bytes []byte, index int) {
+            spider := &pb.Spider{}
+            proto.Unmarshal(bytes, spider)
 
-    // Main queue loop
-    forever := make(chan struct{})
-    go func() {
-        for d := range msgs {
-            // Do something when messages arrive
+            fmt.Println("spider received", "poison:", spider.Poison, "index:", index)
 
-            // Just as an example, this is how
-            // you publish messages to another
-            // exchange (in this case, "zebra")
-            conn.Publish([]byte("hi"), "zebra")
-        }
-    }()
-    <-forever
+            // When receive a "Spider", also publish a "Cow" to "mammals" exchange
+            service.Publish(&pb.Cow{Milk: true}, "mammals")
+        },
+    )
+
+    // Consume messages
+	service.Consume()
 }
 ```
 
 ## Known issues/limitations
 
-- Exchanges are hardcoded
+- Exchange names are hardcoded

@@ -37,7 +37,7 @@ syntax="proto3";
 package main;
 option go_package = "./pb";
 
-message Banana {
+message Cow {
     bool milk = 1;
 }
 ```

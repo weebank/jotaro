@@ -7,7 +7,9 @@ import (
 	"google.golang.org/protobuf/types/known/anypb"
 )
 
-type Message struct {
+type Message protoreflect.ProtoMessage
+
+type RoutedMessage struct {
 	ID   string // ID for routing
 	Body []byte // Message content
 }
@@ -16,7 +18,7 @@ type MessagingService struct {
 	conn     *amqp.Connection
 	ch       *amqp.Channel
 	queues   []amqp.Queue
-	handlers map[string]func(msg protoreflect.ProtoMessage)
+	handlers map[string]func(msg Message)
 }
 
 func bytesToAny(bytes []byte) (any anypb.Any) {

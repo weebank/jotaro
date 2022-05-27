@@ -5,7 +5,6 @@ import (
 	"runtime"
 
 	"github.com/streadway/amqp"
-	"google.golang.org/protobuf/reflect/protoreflect"
 	"google.golang.org/protobuf/types/known/anypb"
 )
 
@@ -33,7 +32,7 @@ func NewService(exchanges ...string) (mS MessagingService) {
 		}
 	}
 
-	mS.handlers = map[string]func(msg protoreflect.ProtoMessage){}
+	mS.handlers = map[string]func(msg Message){}
 
 	return
 }
@@ -84,7 +83,7 @@ func (mS MessagingService) bindQueue(queue string, exchange string) {
 	}
 }
 
-func (mS MessagingService) Publish(msg protoreflect.ProtoMessage, exchange string) error {
+func (mS MessagingService) Publish(msg Message, exchange string) error {
 	err := mS.ch.Publish(
 		exchange, // exchange
 		"",       // routing key
@@ -98,7 +97,7 @@ func (mS MessagingService) Publish(msg protoreflect.ProtoMessage, exchange strin
 	return err
 }
 
-func (mS *MessagingService) Bind(msg protoreflect.ProtoMessage, handler func(msg protoreflect.ProtoMessage)) {
+func (mS *MessagingService) Bind(msg Message, handler func(msg Message)) {
 	any, _ := anypb.New(msg)
 	mS.handlers[any.TypeUrl] = handler
 }

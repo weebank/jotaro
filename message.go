@@ -14,19 +14,24 @@ type RoutedMessage struct {
 	Body []byte // Message content
 }
 
+type handler struct {
+	function func(msg Message)
+	data     Message
+}
+
 type MessagingService struct {
 	conn     *amqp.Connection
 	ch       *amqp.Channel
 	queues   []amqp.Queue
-	handlers map[string]func(msg Message)
+	handlers map[string]handler
 }
 
-func bytesToAny(bytes []byte) (any anypb.Any) {
-	proto.Unmarshal(bytes, &any)
+func unwrap(bytes []byte) (any *anypb.Any) {
+	proto.Unmarshal(bytes, any)
 	return
 }
 
-func wrapProto(msg protoreflect.ProtoMessage) []byte {
+func wrap(msg protoreflect.ProtoMessage) []byte {
 	any, _ := anypb.New(msg)
 	p, _ := proto.Marshal(any)
 	return p

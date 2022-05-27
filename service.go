@@ -5,6 +5,7 @@ import (
 	"runtime"
 
 	"github.com/streadway/amqp"
+	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/anypb"
 )
 
@@ -32,7 +33,7 @@ func NewService(exchanges ...string) (mS MessagingService) {
 		}
 	}
 
-	mS.handlers = map[string]func(msg Message){}
+	mS.handlers = map[string]handler{}
 
 	return
 }
@@ -91,15 +92,16 @@ func (mS MessagingService) Publish(msg Message, exchange string) error {
 		false,    // immediate
 		amqp.Publishing{
 			ContentType: "text/plain",
-			Body:        wrapProto(msg),
+			Body:        wrap(msg),
 		})
 
 	return err
 }
 
-func (mS *MessagingService) Bind(msg Message, handler func(msg Message)) {
+func (mS *MessagingService) Bind(msg Message, function func(msg Message)) {
 	any, _ := anypb.New(msg)
-	mS.handlers[any.TypeUrl] = handler
+	mS.handlers[any.TypeUrl] = handler{function: function, data: msg}
+
 }
 
 func (mS MessagingService) Consume() {
@@ -120,9 +122,11 @@ func (mS MessagingService) Consume() {
 			}
 
 			for msg := range msgs {
-				any := bytesToAny(msg.Body)
+				any := unwrap(msg.Body)
 				if handler, ok := mS.handlers[any.TypeUrl]; ok {
-					handler(any.ProtoReflect().Interface())
+					inst := handler.data
+					anypb.UnmarshalTo(any, inst, proto.UnmarshalOptions{})
+					handler.function(inst)
 				}
 			}
 		}(q.Name)

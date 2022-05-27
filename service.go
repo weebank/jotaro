@@ -5,7 +5,7 @@ import (
 	"runtime"
 
 	"github.com/streadway/amqp"
-	"google.golang.org/protobuf/proto"
+	"google.golang.org/protobuf/reflect/protoreflect"
 	"google.golang.org/protobuf/types/known/anypb"
 )
 
@@ -33,7 +33,7 @@ func NewService(exchanges ...string) (mS MessagingService) {
 		}
 	}
 
-	mS.handlers = map[string]handler{}
+	mS.handlers = map[string]func(bytes []byte){}
 
 	return
 }
@@ -84,7 +84,7 @@ func (mS MessagingService) bindQueue(queue string, exchange string) {
 	}
 }
 
-func (mS MessagingService) Publish(msg Message, exchange string) error {
+func (mS MessagingService) Publish(msg protoreflect.ProtoMessage, exchange string) error {
 	err := mS.ch.Publish(
 		exchange, // exchange
 		"",       // routing key
@@ -98,9 +98,9 @@ func (mS MessagingService) Publish(msg Message, exchange string) error {
 	return err
 }
 
-func (mS *MessagingService) Bind(msg Message, function func(msg Message)) {
+func (mS *MessagingService) Bind(msg protoreflect.ProtoMessage, handler func(msg []byte)) {
 	any, _ := anypb.New(msg)
-	mS.handlers[any.TypeUrl] = handler{function: function, data: msg}
+	mS.handlers[any.TypeUrl] = handler
 
 }
 
@@ -124,9 +124,7 @@ func (mS MessagingService) Consume() {
 			for msg := range msgs {
 				any := unwrap(msg.Body)
 				if handler, ok := mS.handlers[any.TypeUrl]; ok {
-					inst := handler.data
-					anypb.UnmarshalTo(any, inst, proto.UnmarshalOptions{})
-					handler.function(inst)
+					handler(any.GetValue())
 				}
 			}
 		}(q.Name)

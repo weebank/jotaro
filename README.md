@@ -51,10 +51,10 @@ Now, on the main Go file, we can write a service like this:
 
 func main() {
     // Create service and define exchanges
-	service := rmq.NewService("fruits", "insects")
+    service := rmq.NewService("fruits", "insects")
 
     // Bind handler for "Banana"
-	service.Bind(&pb.Banana{},
+    service.Bind(&pb.Banana{},
         func(bytes []byte, index int) {
             banana := &pb.Banana{}
             proto.Unmarshal(bytes, banana)

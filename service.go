@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"runtime"
+	"strconv"
 
 	"github.com/streadway/amqp"
 	"google.golang.org/protobuf/reflect/protoreflect"
@@ -34,7 +35,7 @@ func NewService(exchanges ...string) (mS MessagingService) {
 		}
 	}
 
-	mS.handlers = map[string]func(bytes []byte){}
+	mS.handlers = map[string]func(bytes []byte, index int){}
 
 	return
 }
@@ -99,7 +100,7 @@ func (mS MessagingService) Publish(id string, msg protoreflect.ProtoMessage, exc
 	return err
 }
 
-func (mS *MessagingService) Bind(msg protoreflect.ProtoMessage, handler func(msg []byte)) {
+func (mS *MessagingService) Bind(msg protoreflect.ProtoMessage, handler func(bytes []byte, index int)) {
 	any, _ := anypb.New(msg)
 	mS.handlers[any.TypeUrl] = handler
 
@@ -125,7 +126,8 @@ func (mS MessagingService) Consume() {
 			for msg := range msgs {
 				if any, err := unwrap(msg.Body); err == nil {
 					if handler, ok := mS.handlers[any.TypeUrl]; ok {
-						handler(any.GetValue())
+						index, _ := strconv.Atoi(msg.RoutingKey)
+						handler(any.GetValue(), index)
 					}
 				}
 			}

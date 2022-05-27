@@ -15,7 +15,7 @@ type MessagingService struct {
 	conn     *amqp.Connection
 	ch       *amqp.Channel
 	queues   []amqp.Queue
-	handlers map[string]func(bytes []byte)
+	handlers map[string]func(bytes []byte, index int)
 }
 
 func unwrap(bytes []byte) (*anypb.Any, error) {

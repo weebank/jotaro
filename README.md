@@ -38,7 +38,4 @@ func main() {
 
 ## Known issues/limitations
 
-- Single threaded
-- Single queue
-- Still too low level (could forward less RabbitMQ abstractions)
 - Exchanges are hardcoded

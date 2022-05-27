@@ -1,6 +1,7 @@
 package rmq
 
 import (
+	"github.com/golang/protobuf/ptypes/any"
 	"github.com/streadway/amqp"
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/reflect/protoreflect"
@@ -19,9 +20,10 @@ type MessagingService struct {
 	handlers map[string]func(bytes []byte)
 }
 
-func unwrap(bytes []byte) (any *anypb.Any) {
+func unwrap(bytes []byte) *anypb.Any {
+	any := &any.Any{}
 	proto.Unmarshal(bytes, any)
-	return
+	return any
 }
 
 func wrap(msg protoreflect.ProtoMessage) []byte {

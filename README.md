@@ -52,6 +52,7 @@ Now, on the main Go file, we can write a service like this:
 func main() {
     // Create service and define exchanges
     service := rmq.NewService("fruits", "insects")
+    defer service.Close()
 
     // Bind handler for "Banana"
     service.Bind(&pb.Banana{},

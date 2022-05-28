@@ -109,7 +109,6 @@ func (mS MessagingService) PublishRouted(id string, msg protoreflect.ProtoMessag
 func (mS *MessagingService) Bind(msg protoreflect.ProtoMessage, handler func(bytes []byte, index int)) {
 	any, _ := anypb.New(msg)
 	mS.handlers[any.TypeUrl] = handler
-
 }
 
 func (mS MessagingService) Consume() {
@@ -140,4 +139,9 @@ func (mS MessagingService) Consume() {
 		}(q.Name)
 	}
 	<-forever
+}
+
+func (mS *MessagingService) Close() {
+	mS.ch.Close()
+	mS.conn.Close()
 }

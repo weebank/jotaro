@@ -87,20 +87,25 @@ func (mS MessagingService) bindQueue(queue string, exchange string, index int) {
 	}
 }
 
-func (mS MessagingService) Publish(msg protoreflect.ProtoMessage, exchange string) error {
-	err := mS.PublishRouted(uuid.NewString(), msg, exchange)
-	return err
-}
+// Publish message
+func (mS MessagingService) PublishRouted(id []byte, msg protoreflect.ProtoMessage, exchange string, callback func(bytes []byte, index int)) error {
+	// Add callback ID
+	uuid := uuid.NewString()
 
-func (mS MessagingService) PublishRouted(id string, msg protoreflect.ProtoMessage, exchange string) error {
+	// Set callback
+	if callback != nil {
+		mS.callbacks[uuid] = callback
+	}
+
+	// Publish message
 	err := mS.ch.Publish(
-		exchange,                   // exchange
-		fmt.Sprint(queueIndex(id)), // routing key
-		false,                      // mandatory
-		false,                      // immediate
+		exchange,       // exchange
+		fmt.Sprint(id), // routing key
+		false,          // mandatory
+		false,          // immediate
 		amqp.Publishing{
 			ContentType: "text/plain",
-			Body:        wrap(msg),
+			Body:        wrap(uuid, msg),
 		})
 
 	return err
@@ -129,9 +134,12 @@ func (mS MessagingService) Consume() {
 			}
 
 			for msg := range msgs {
-				if any, err := unwrap(msg.Body); err == nil {
+				if id, any, err := unwrap(msg.Body); err == nil {
+					index, _ := strconv.Atoi(msg.RoutingKey)
+					if callback, ok := mS.callbacks[id]; ok {
+						callback(any.GetValue(), index)
+					}
 					if handler, ok := mS.handlers[any.TypeUrl]; ok {
-						index, _ := strconv.Atoi(msg.RoutingKey)
 						handler(any.GetValue(), index)
 					}
 				}

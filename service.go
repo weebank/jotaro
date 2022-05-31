@@ -126,10 +126,10 @@ func (mS *MessagingService) PublishAdvanced(id, routing, exchange string, msg pr
 
 	// Publish message
 	err := mS.ch.Publish(
-		exchange, // exchange
-		routing,  // routing key
-		false,    // mandatory
-		false,    // immediate
+		exchange,                        // exchange
+		fmt.Sprint(queueIndex(routing)), // routing key
+		false,                           // mandatory
+		false,                           // immediate
 		amqp.Publishing{
 			ContentType: "text/plain",
 			Body:        wrap(id, msg),

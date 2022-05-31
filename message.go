@@ -43,7 +43,7 @@ func wrap(id string, msg protoreflect.ProtoMessage) []byte {
 	return bytes
 }
 
-func queueIndex(id []byte) int {
+func queueIndex(id string) int {
 	queueCount := 8
 	if str, ok := os.LookupEnv("QUEUE_COUNT"); ok {
 		if count, err := strconv.Atoi(str); err == nil {
@@ -52,7 +52,7 @@ func queueIndex(id []byte) int {
 	}
 
 	h := fnv.New32a()
-	h.Write(id)
+	h.Write([]byte(id))
 
 	return int(h.Sum32()) % queueCount
 }

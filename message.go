@@ -16,7 +16,7 @@ type MessagingService struct {
 	conn      *amqp.Connection
 	ch        *amqp.Channel
 	queues    []amqp.Queue
-	handlers  map[string]func(bytes []byte, index int)
+	handlers  map[string]func(id string, bytes []byte, index int)
 	callbacks map[string]func(bytes []byte, index int)
 }
 

@@ -87,25 +87,37 @@ func (mS MessagingService) bindQueue(queue string, exchange string, index int) {
 	}
 }
 
+// Publish without routing or wrapping id
+func (mS *MessagingService) Publish(exchange string, msg protoreflect.ProtoMessage, callback func(bytes []byte, index int)) error {
+	return mS.PublishAdvanced("", "", exchange, msg, nil)
+}
+
 // Publish message
-func (mS MessagingService) PublishRouted(id []byte, msg protoreflect.ProtoMessage, exchange string, callback func(bytes []byte, index int)) error {
+func (mS *MessagingService) PublishAdvanced(id, routing, exchange string, msg protoreflect.ProtoMessage, callback func(bytes []byte, index int)) error {
 	// Add callback ID
-	uuid := uuid.NewString()
+	if id == "" {
+		id = uuid.NewString()
+	}
+
+	// Add routing key
+	if routing == "" {
+		routing = uuid.NewString()
+	}
 
 	// Set callback
 	if callback != nil {
-		mS.callbacks[uuid] = callback
+		mS.callbacks[id] = callback
 	}
 
 	// Publish message
 	err := mS.ch.Publish(
-		exchange,       // exchange
-		fmt.Sprint(id), // routing key
-		false,          // mandatory
-		false,          // immediate
+		exchange, // exchange
+		routing,  // routing key
+		false,    // mandatory
+		false,    // immediate
 		amqp.Publishing{
 			ContentType: "text/plain",
-			Body:        wrap(uuid, msg),
+			Body:        wrap(id, msg),
 		})
 
 	return err

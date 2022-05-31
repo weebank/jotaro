@@ -36,7 +36,7 @@ func NewService(exchanges ...string) (mS MessagingService) {
 		}
 	}
 
-	mS.handlers = map[string]func(bytes []byte, index int){}
+	mS.handlers = map[string]func(id string, bytes []byte, index int){}
 
 	return
 }
@@ -87,9 +87,24 @@ func (mS MessagingService) bindQueue(queue string, exchange string, index int) {
 	}
 }
 
-// Publish without routing or wrapping id
-func (mS *MessagingService) Publish(exchange string, msg protoreflect.ProtoMessage, callback func(bytes []byte, index int)) error {
+// Publish without callback, routing or wrapping id
+func (mS *MessagingService) Publish(exchange string, msg protoreflect.ProtoMessage) error {
 	return mS.PublishAdvanced("", "", exchange, msg, nil)
+}
+
+// Publish without callback, or wrapping id
+func (mS *MessagingService) PublishRouted(routing, exchange string, msg protoreflect.ProtoMessage) error {
+	return mS.PublishAdvanced("", routing, exchange, msg, nil)
+}
+
+// Publish without routing or wrapping id
+func (mS *MessagingService) PublishEvent(exchange string, msg protoreflect.ProtoMessage, callback func(bytes []byte, index int)) error {
+	return mS.PublishAdvanced("", "", exchange, msg, callback)
+}
+
+// Publish without callback or routing
+func (mS *MessagingService) PublishResponse(id, exchange string, msg protoreflect.ProtoMessage) error {
+	return mS.PublishAdvanced(id, "", exchange, msg, nil)
 }
 
 // Publish message
@@ -123,7 +138,7 @@ func (mS *MessagingService) PublishAdvanced(id, routing, exchange string, msg pr
 	return err
 }
 
-func (mS *MessagingService) Bind(msg protoreflect.ProtoMessage, handler func(bytes []byte, index int)) {
+func (mS *MessagingService) Bind(msg protoreflect.ProtoMessage, handler func(id string, bytes []byte, index int)) {
 	any, _ := anypb.New(msg)
 	mS.handlers[any.TypeUrl] = handler
 }
@@ -152,7 +167,7 @@ func (mS MessagingService) Consume() {
 						callback(any.GetValue(), index)
 					}
 					if handler, ok := mS.handlers[any.TypeUrl]; ok {
-						handler(any.GetValue(), index)
+						handler(id, any.GetValue(), index)
 					}
 				}
 			}

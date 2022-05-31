@@ -45,8 +45,8 @@ func (mS *MessagingService) newQueue() string {
 	q, err := mS.ch.QueueDeclare(
 		"",    // name
 		true,  // durable
-		false, // auto-deleted
-		false, // exclusive
+		true,  // auto-deleted
+		true,  // exclusive
 		false, // no-wait
 		nil,   // arguments
 	)
@@ -151,7 +151,7 @@ func (mS MessagingService) Consume() {
 				qName, // queue
 				"",    // consumer
 				true,  // auto ack
-				false, // exclusive
+				true,  // exclusive
 				false, // no local
 				false, // no wait
 				nil,   // args

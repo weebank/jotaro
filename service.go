@@ -132,7 +132,7 @@ func (mS *MessagingService) PublishEvent(exchange string, msg protoreflect.Proto
 func (mS *MessagingService) PublishAdvanced(id, route, exchange string, msg protoreflect.ProtoMessage, callback func(queue uint, bytes []byte)) error {
 	// Add callback ID if needed
 	isCallback := id != ""
-	if isCallback {
+	if !isCallback {
 		id = uuid.NewString()
 	}
 

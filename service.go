@@ -17,28 +17,7 @@ var queues = uint(8)
 
 type SubscriptionMode uint8
 
-const (
-	IN  SubscriptionMode = 1
-	OUT SubscriptionMode = 2
-)
-
-type Subscription struct {
-	Exchange string
-	Mode     SubscriptionMode
-}
-
-func exchangeName(exchange string, mode SubscriptionMode) string {
-	switch mode {
-	case IN:
-		return "in-" + exchange
-	case OUT:
-		return "out-" + exchange
-	default:
-		return ""
-	}
-}
-
-func NewService(name string, exchanges []Subscription) (mS MessagingService) {
+func NewService(name string, exchanges []string) (mS MessagingService) {
 	// Create RabbitMQ connection
 	conn, err := amqp.Dial("amqp://guest:guest@localhost:5672/")
 	if err != nil {
@@ -58,12 +37,7 @@ func NewService(name string, exchanges []Subscription) (mS MessagingService) {
 
 	// Bind exchanges
 	for _, e := range exchanges {
-		if e.Mode&IN != 0 {
-			mS.newExchange(exchangeName(e.Exchange, IN))
-		}
-		if e.Mode&OUT != 0 {
-			mS.newExchange(exchangeName(e.Exchange, OUT))
-		}
+		mS.newExchange(e)
 	}
 
 	// Load queue count preference from env
@@ -80,12 +54,7 @@ func NewService(name string, exchanges []Subscription) (mS MessagingService) {
 			q := mS.newQueue(i)
 			// Bind exchanges to these queues
 			for _, e := range exchanges {
-				if e.Mode&IN != 0 {
-					mS.bindQueue(q, exchangeName(e.Exchange, IN), i)
-				}
-				if e.Mode&OUT != 0 {
-					mS.bindQueue(q, exchangeName(e.Exchange, OUT), i)
-				}
+				mS.bindQueue(q, e, i)
 			}
 		}
 
@@ -217,12 +186,15 @@ func (mS MessagingService) Consume() {
 			for msg := range msgs {
 				if id, any, err := unwrap(msg.Body); err == nil {
 					index, _ := strconv.Atoi(msg.RoutingKey)
-					if callback, ok := mS.callbacks[id]; ok {
-						callback(uint(index), any.GetValue())
-					}
-					if handler, ok := mS.handlers[any.TypeUrl]; ok {
-						if res := handler(uint(index), any.GetValue()); res != nil {
-							mS.PublishAdvanced(id, res.Route, msg.Exchange, res.Message, nil)
+					if id == "" {
+						if handler, ok := mS.handlers[any.TypeUrl]; ok {
+							if res := handler(uint(index), any.GetValue()); res != nil {
+								mS.PublishAdvanced(id, res.Route, msg.Exchange, res.Message, nil)
+							}
+						}
+					} else {
+						if callback, ok := mS.callbacks[id]; ok {
+							callback(uint(index), any.GetValue())
 						}
 					}
 				}

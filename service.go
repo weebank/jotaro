@@ -13,7 +13,7 @@ import (
 	"google.golang.org/protobuf/types/known/anypb"
 )
 
-func NewService(name string, exchanges ...string) (mS MessagingService) {
+func NewService(name string, exchanges []string) (mS MessagingService) {
 	mS.name = name
 
 	mS.queues = 8

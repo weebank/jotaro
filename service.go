@@ -3,6 +3,7 @@ package rmq
 import (
 	"fmt"
 	"log"
+	"os"
 	"runtime"
 	"strconv"
 
@@ -14,6 +15,13 @@ import (
 
 func NewService(name string, exchanges ...string) (mS MessagingService) {
 	mS.name = name
+
+	mS.queues = 8
+	if str, ok := os.LookupEnv("QUEUE_COUNT"); ok {
+		if count, err := strconv.Atoi(str); err == nil {
+			mS.queues = uint(count)
+		}
+	}
 
 	conn, err := amqp.Dial("amqp://guest:guest@localhost:5672/")
 	if err != nil {
@@ -55,8 +63,6 @@ func (mS *MessagingService) newQueue(index int) string {
 	if err != nil {
 		log.Fatalf("couldn't declare a RabbitMQ queue: %s", err.Error())
 	}
-
-	mS.queues = append(mS.queues, q)
 
 	return q.Name
 }
@@ -128,10 +134,10 @@ func (mS *MessagingService) PublishAdvanced(id, routing, exchange string, msg pr
 
 	// Publish message
 	err := mS.ch.Publish(
-		exchange,                        // exchange
-		fmt.Sprint(queueIndex(routing)), // routing key
-		false,                           // mandatory
-		false,                           // immediate
+		exchange, // exchange
+		fmt.Sprint(queueIndex(routing, mS.queues)), // routing key
+		false, // mandatory
+		false, // immediate
 		amqp.Publishing{
 			ContentType: "text/plain",
 			Body:        wrap(id, msg),
@@ -147,16 +153,16 @@ func (mS *MessagingService) Bind(msg protoreflect.ProtoMessage, handler func(id 
 
 func (mS MessagingService) Consume() {
 	forever := make(chan struct{})
-	for _, q := range mS.queues {
-		go func(qName string) {
+	for i := uint(0); i < mS.queues; i++ {
+		go func(i uint) {
 			msgs, err := mS.ch.Consume(
-				qName, // queue
-				"",    // consumer
-				true,  // auto ack
-				true,  // exclusive
-				false, // no local
-				false, // no wait
-				nil,   // args
+				fmt.Sprint(mS.name, "-", i), // queue
+				"",                          // consumer
+				true,                        // auto ack
+				true,                        // exclusive
+				false,                       // no local
+				false,                       // no wait
+				nil,                         // args
 			)
 			if err != nil {
 				return
@@ -173,7 +179,7 @@ func (mS MessagingService) Consume() {
 					}
 				}
 			}
-		}(q.Name)
+		}(i)
 	}
 	<-forever
 }

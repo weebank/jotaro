@@ -2,8 +2,6 @@ package rmq
 
 import (
 	"hash/fnv"
-	"os"
-	"strconv"
 
 	"github.com/streadway/amqp"
 	"github.com/weebank/rmq/pb"
@@ -16,9 +14,9 @@ type MessagingService struct {
 	name      string
 	conn      *amqp.Connection
 	ch        *amqp.Channel
-	queues    []amqp.Queue
 	handlers  map[string]func(id string, bytes []byte, index int)
 	callbacks map[string]func(bytes []byte, index int)
+	queues    uint
 }
 
 func unwrap(bytes []byte) (id string, any *anypb.Any, err error) {
@@ -44,16 +42,9 @@ func wrap(id string, msg protoreflect.ProtoMessage) []byte {
 	return bytes
 }
 
-func queueIndex(id string) int {
-	queueCount := 8
-	if str, ok := os.LookupEnv("QUEUE_COUNT"); ok {
-		if count, err := strconv.Atoi(str); err == nil {
-			queueCount = count
-		}
-	}
-
+func queueIndex(id string, queues uint) int {
 	h := fnv.New32a()
 	h.Write([]byte(id))
 
-	return int(h.Sum32()) % queueCount
+	return int(h.Sum32()) % int(queues)
 }

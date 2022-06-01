@@ -14,7 +14,7 @@ type MessagingService struct {
 	name      string
 	conn      *amqp.Connection
 	ch        *amqp.Channel
-	handlers  map[string]func(id string, queue uint, bytes []byte)
+	handlers  map[string]func(queue uint, bytes []byte) protoreflect.ProtoMessage
 	callbacks map[string]func(queue uint, bytes []byte)
 }
 

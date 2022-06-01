@@ -15,7 +15,16 @@ import (
 
 var queues = uint(8)
 
-func NewService(name string, exchanges []string) (mS MessagingService) {
+type Subscription struct {
+	Exchange       string
+	AllowCallbacks bool
+}
+
+func callbackExchangeName(exchange string) string {
+	return fmt.Sprint("_callback-", exchange)
+}
+
+func NewService(name string, exchanges []Subscription) (mS MessagingService) {
 	// Create RabbitMQ connection
 	conn, err := amqp.Dial("amqp://guest:guest@localhost:5672/")
 	if err != nil {
@@ -35,7 +44,10 @@ func NewService(name string, exchanges []string) (mS MessagingService) {
 
 	// Bind exchanges
 	for _, e := range exchanges {
-		mS.newExchange(e)
+		mS.newExchange(e.Exchange)
+		if e.AllowCallbacks {
+			mS.newExchange(callbackExchangeName(e.Exchange))
+		}
 	}
 
 	// Load queue count preference from env
@@ -52,12 +64,15 @@ func NewService(name string, exchanges []string) (mS MessagingService) {
 			q := mS.newQueue(i)
 			// Bind exchanges to these queues
 			for _, e := range exchanges {
-				mS.bindQueue(q, e, i)
+				mS.bindQueue(q, e.Exchange, i)
+				if e.AllowCallbacks {
+					mS.bindQueue(q, callbackExchangeName(e.Exchange), i)
+				}
 			}
 		}
 
 		// Add handlers and callbacks
-		mS.handlers = map[string]func(id string, queue uint, bytes []byte){}
+		mS.handlers = map[string]func(queue uint, bytes []byte) protoreflect.ProtoMessage{}
 		mS.callbacks = map[string]func(queue uint, bytes []byte){}
 	}
 
@@ -163,7 +178,7 @@ func (mS *MessagingService) PublishAdvanced(id, routing, exchange string, msg pr
 }
 
 // Bind handler to message
-func (mS *MessagingService) Bind(msg protoreflect.ProtoMessage, handler func(id string, queue uint, bytes []byte)) {
+func (mS *MessagingService) Bind(msg protoreflect.ProtoMessage, handler func(queue uint, bytes []byte) protoreflect.ProtoMessage) {
 	any, _ := anypb.New(msg)
 	mS.handlers[any.TypeUrl] = handler
 }
@@ -193,7 +208,9 @@ func (mS MessagingService) Consume() {
 						callback(uint(index), any.GetValue())
 					}
 					if handler, ok := mS.handlers[any.TypeUrl]; ok {
-						handler(id, uint(index), any.GetValue())
+						if res := handler(uint(index), any.GetValue()); res != nil {
+							mS.PublishResponse(id, callbackExchangeName(msg.Exchange), res)
+						}
 					}
 				}
 			}

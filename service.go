@@ -13,6 +13,8 @@ import (
 	"google.golang.org/protobuf/types/known/anypb"
 )
 
+var queues = uint(8)
+
 func NewService(name string, exchanges []string) (mS MessagingService) {
 	// Create RabbitMQ connection
 	conn, err := amqp.Dial("amqp://guest:guest@localhost:5672/")
@@ -36,16 +38,15 @@ func NewService(name string, exchanges []string) (mS MessagingService) {
 		mS.newExchange(e)
 	}
 
+	// Load queue count preference from env
+	if str, ok := os.LookupEnv("QUEUE_COUNT"); ok {
+		if count, err := strconv.Atoi(str); err == nil {
+			queues = uint(count)
+		}
+	}
+
 	// Create queues
 	if len(exchanges) > 0 {
-		// Load queue count preference from env
-		mS.queues = 8
-		if str, ok := os.LookupEnv("QUEUE_COUNT"); ok {
-			if count, err := strconv.Atoi(str); err == nil {
-				mS.queues = uint(count)
-			}
-		}
-
 		// Create runtime.NumCPU() queues
 		for i := 0; i < runtime.NumCPU(); i++ {
 			q := mS.newQueue(i)
@@ -148,10 +149,10 @@ func (mS *MessagingService) PublishAdvanced(id, routing, exchange string, msg pr
 
 	// Publish message
 	err := mS.ch.Publish(
-		exchange, // exchange
-		fmt.Sprint(queueIndex(routing, mS.queues)), // routing key
-		false, // mandatory
-		false, // immediate
+		exchange,                                // exchange
+		fmt.Sprint(queueIndex(routing, queues)), // routing key
+		false,                                   // mandatory
+		false,                                   // immediate
 		amqp.Publishing{
 			ContentType: "text/plain",
 			Body:        wrap(id, msg),
@@ -169,7 +170,7 @@ func (mS *MessagingService) Bind(msg protoreflect.ProtoMessage, handler func(id 
 // Start consuming queues
 func (mS MessagingService) Consume() {
 	forever := make(chan struct{})
-	for i := uint(0); i < mS.queues; i++ {
+	for i := uint(0); i < queues; i++ {
 		go func(i uint) {
 			msgs, err := mS.ch.Consume(
 				fmt.Sprint(mS.name, "-", i), // queue

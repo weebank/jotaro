@@ -84,4 +84,4 @@ func main() {
 
 ## Known issues/limitations
 
-- Exchange names are hardcoded
+- All microservices must have the same amount of queues (`QUEUE_COUNT`)

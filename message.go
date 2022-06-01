@@ -16,7 +16,6 @@ type MessagingService struct {
 	ch        *amqp.Channel
 	handlers  map[string]func(id string, bytes []byte, index int)
 	callbacks map[string]func(bytes []byte, index int)
-	queues    uint
 }
 
 func unwrap(bytes []byte) (id string, any *anypb.Any, err error) {

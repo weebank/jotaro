@@ -26,7 +26,7 @@ func unwrap(bytes []byte) (id string, any *anypb.Any, err error) {
 	}
 
 	any = &anypb.Any{}
-	if err := proto.Unmarshal(bytes, any); err != nil {
+	if err := proto.Unmarshal(wrapping.Body, any); err != nil {
 		return wrapping.GetId(), nil, err
 	}
 

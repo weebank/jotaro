@@ -41,9 +41,9 @@ func wrap(id string, msg protoreflect.ProtoMessage) []byte {
 	return bytes
 }
 
-func queueIndex(id string, queues uint) int {
+func queueIndex(id string, queues uint) uint {
 	h := fnv.New32a()
 	h.Write([]byte(id))
 
-	return int(h.Sum32()) % int(queues)
+	return uint(h.Sum32()) % queues
 }

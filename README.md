@@ -68,43 +68,46 @@ func main() {
 
     // Bind handler for "Banana"
     service.Bind(&pb.Banana{},
-        func(id string, queue uint, bytes []byte) {
+        func(queue uint, bytes []byte) *rmq.Response {
             banana := &pb.Banana{}
             proto.Unmarshal(bytes, banana)
 
             fmt.Println("banana received", "yellowness:", banana.GetYellowness(), "queue:", queue)
 
-            // When receive a "Beetle", also publish a "Cow" to "mammals" exchange
-            service.Publish(&pb.Cow{Milk: true}, "mammals")
+            // When receive a "Banana", return an "Apple" as a callback
+            return &rmq.Response{Message: &pb.Apple{Redness: 1.0}}
         },
     )
 
     // Bind handler for "Apple"
     service.Bind(&pb.Apple{},
-        func(id string, queue uint, bytes []byte) {
+        func(queue uint, bytes []byte) *rmq.Response {
             apple := &pb.Apple{}
             proto.Unmarshal(bytes, apple)
 
             fmt.Println("apple received", "redness:", apple.GetRedness(), "queue:", queue)
 
-            // When receive an "Apple", also publish a "Cow" to "mammals" as a callback
-            service.PublishResponse(id, &pb.Cow{Milk: true}, "mammals")
+            // When receive an "Apple", publish a "Cow" to "mammals" exchange
+            service.Publish(&pb.Cow{Milk: true}, "mammals")
+
+            return nil
         },
     )
 
     // Bind handler for "Spider"
     service.Bind(&pb.Spider{},
-        func(id string, queue uint, bytes []byte) {
+        func(queue uint, bytes []byte) *rmq.Response {
             spider := &pb.Spider{}
             proto.Unmarshal(bytes, spider)
 
             fmt.Println("spider received", "poison:", spider.GetPoison(), "queue:", queue)
 
             // When receive a "Spider", also publish a "Cow" to "mammals" exchange,
-            // specifying a callback function to be called by a service.PublishEvent()
-            // on the other service
+            // specifying a callback function to be called by another service
             service.PublishEvent(&pb.Cow{Milk: true}, "mammals",
                 func(queue uint, bytes []byte) { fmt.Println("received cow callback") })
+
+            return nil
         },
     )
 

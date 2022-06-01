@@ -5,6 +5,6 @@ option go_package = "./pb";
 
 message Wrapping {
     string id = 1;
-    bool callback = 2;
+    bool isCallback = 2;
     bytes body = 3;
 }

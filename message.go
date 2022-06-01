@@ -23,24 +23,24 @@ type MessagingService struct {
 	callbacks map[string]func(queue uint, bytes []byte)
 }
 
-func unwrap(bytes []byte) (id string, callback bool, any *anypb.Any, err error) {
+func unwrap(bytes []byte) (id string, isCallback bool, any *anypb.Any, err error) {
 	wrapping := &pb.Wrapping{}
 	if err := proto.Unmarshal(bytes, wrapping); err != nil {
-		return "", wrapping.GetCallback(), nil, err
+		return "", false, nil, err
 	}
 
 	any = &anypb.Any{}
 	if err := proto.Unmarshal(wrapping.Body, any); err != nil {
-		return wrapping.GetId(), wrapping.GetCallback(), nil, err
+		return wrapping.GetId(), wrapping.GetIsCallback(), nil, err
 	}
 
-	return wrapping.GetId(), wrapping.GetCallback(), any, nil
+	return wrapping.GetId(), wrapping.GetIsCallback(), any, nil
 }
 
-func wrap(id string, callback bool, msg protoreflect.ProtoMessage) []byte {
+func wrap(id string, isCallback bool, msg protoreflect.ProtoMessage) []byte {
 	any, _ := anypb.New(msg)
 	body, _ := proto.Marshal(any)
-	wrapping := &pb.Wrapping{Id: id, Callback: callback, Body: body}
+	wrapping := &pb.Wrapping{Id: id, IsCallback: isCallback, Body: body}
 	bytes, _ := proto.Marshal(wrapping)
 
 	return bytes

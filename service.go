@@ -59,8 +59,8 @@ func NewService(name string, exchanges []string) (mS MessagingService) {
 		}
 
 		// Add handlers and callbacks
-		mS.handlers = map[string]func(queue uint, bytes []byte) *Response{}
-		mS.callbacks = map[string]func(queue uint, bytes []byte){}
+		mS.handlers = map[string]func(bytes []byte) *Response{}
+		mS.callbacks = map[string]func(bytes []byte){}
 	}
 
 	return
@@ -124,12 +124,12 @@ func (mS *MessagingService) PublishRouted(route, exchange string, msg protorefle
 }
 
 // Publish without routing or wrapping id
-func (mS *MessagingService) PublishEvent(exchange string, msg protoreflect.ProtoMessage, callback func(queue uint, bytes []byte)) error {
+func (mS *MessagingService) PublishEvent(exchange string, msg protoreflect.ProtoMessage, callback func(bytes []byte)) error {
 	return mS.PublishAdvanced("", "", exchange, msg, callback)
 }
 
 // Publish message
-func (mS *MessagingService) PublishAdvanced(id, route, exchange string, msg protoreflect.ProtoMessage, callback func(queue uint, bytes []byte)) error {
+func (mS *MessagingService) PublishAdvanced(id, route, exchange string, msg protoreflect.ProtoMessage, callback func(bytes []byte)) error {
 	// Add callback ID if needed
 	isCallback := id != ""
 	if !isCallback {
@@ -161,7 +161,7 @@ func (mS *MessagingService) PublishAdvanced(id, route, exchange string, msg prot
 }
 
 // Bind handler to message
-func (mS *MessagingService) Bind(msg protoreflect.ProtoMessage, handler func(queue uint, bytes []byte) *Response) {
+func (mS *MessagingService) Bind(msg protoreflect.ProtoMessage, handler func(bytes []byte) *Response) {
 	any, _ := anypb.New(msg)
 	mS.handlers[any.TypeUrl] = handler
 }
@@ -186,14 +186,13 @@ func (mS MessagingService) Consume() {
 
 			for msg := range msgs {
 				if id, isCallback, any, err := unwrap(msg.Body); err == nil {
-					index, _ := strconv.Atoi(msg.RoutingKey)
 					if isCallback {
 						if callback, ok := mS.callbacks[id]; ok {
-							callback(uint(index), any.GetValue())
+							callback(any.GetValue())
 						}
 					} else {
 						if handler, ok := mS.handlers[any.TypeUrl]; ok {
-							if res := handler(uint(index), any.GetValue()); res != nil {
+							if res := handler(any.GetValue()); res != nil {
 								mS.PublishAdvanced(id, res.Route, msg.Exchange, res.Message, nil)
 							}
 						}

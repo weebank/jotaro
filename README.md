@@ -68,11 +68,11 @@ func main() {
 
     // Bind handler for "Banana"
     service.Bind(&pb.Banana{},
-        func(queue uint, bytes []byte) *rmq.Response {
+        func(bytes []byte) *rmq.Response {
             banana := &pb.Banana{}
             proto.Unmarshal(bytes, banana)
 
-            fmt.Println("banana received", "yellowness:", banana.GetYellowness(), "queue:", queue)
+            fmt.Println("banana received", "yellowness:", banana.GetYellowness())
 
             // When receive a "Banana", return an "Apple" as a callback
             return &rmq.Response{Message: &pb.Apple{Redness: 1.0}}
@@ -81,11 +81,11 @@ func main() {
 
     // Bind handler for "Apple"
     service.Bind(&pb.Apple{},
-        func(queue uint, bytes []byte) *rmq.Response {
+        func(bytes []byte) *rmq.Response {
             apple := &pb.Apple{}
             proto.Unmarshal(bytes, apple)
 
-            fmt.Println("apple received", "redness:", apple.GetRedness(), "queue:", queue)
+            fmt.Println("apple received", "redness:", apple.GetRedness())
 
             // When receive an "Apple", publish a "Cow" to "mammals" exchange
             service.Publish(&pb.Cow{Milk: true}, "mammals")
@@ -96,16 +96,16 @@ func main() {
 
     // Bind handler for "Spider"
     service.Bind(&pb.Spider{},
-        func(queue uint, bytes []byte) *rmq.Response {
+        func(bytes []byte) *rmq.Response {
             spider := &pb.Spider{}
             proto.Unmarshal(bytes, spider)
 
-            fmt.Println("spider received", "poison:", spider.GetPoison(), "queue:", queue)
+            fmt.Println("spider received", "poison:", spider.GetPoison())
 
             // When receive a "Spider", also publish a "Cow" to "mammals" exchange,
             // specifying a callback function to be called by another service
             service.PublishEvent(&pb.Cow{Milk: true}, "mammals",
-                func(queue uint, bytes []byte) { fmt.Println("received cow callback") })
+                func(bytes []byte) { fmt.Println("received cow callback") })
 
             return nil
         },

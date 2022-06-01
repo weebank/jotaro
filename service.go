@@ -130,8 +130,9 @@ func (mS *MessagingService) PublishEvent(exchange string, msg protoreflect.Proto
 
 // Publish message
 func (mS *MessagingService) PublishAdvanced(id, route, exchange string, msg protoreflect.ProtoMessage, callback func(queue uint, bytes []byte)) error {
-	// Add callback ID
-	if id == "" {
+	// Add callback ID if needed
+	isCallback := id != ""
+	if isCallback {
 		id = uuid.NewString()
 	}
 
@@ -153,7 +154,7 @@ func (mS *MessagingService) PublishAdvanced(id, route, exchange string, msg prot
 		false,                                 // immediate
 		amqp.Publishing{
 			ContentType: "text/plain",
-			Body:        wrap(id, msg),
+			Body:        wrap(id, isCallback, msg),
 		})
 
 	return err
@@ -184,17 +185,17 @@ func (mS MessagingService) Consume() {
 			}
 
 			for msg := range msgs {
-				if id, any, err := unwrap(msg.Body); err == nil {
+				if id, isCallback, any, err := unwrap(msg.Body); err == nil {
 					index, _ := strconv.Atoi(msg.RoutingKey)
-					if id == "" {
+					if isCallback {
+						if callback, ok := mS.callbacks[id]; ok {
+							callback(uint(index), any.GetValue())
+						}
+					} else {
 						if handler, ok := mS.handlers[any.TypeUrl]; ok {
 							if res := handler(uint(index), any.GetValue()); res != nil {
 								mS.PublishAdvanced(id, res.Route, msg.Exchange, res.Message, nil)
 							}
-						}
-					} else {
-						if callback, ok := mS.callbacks[id]; ok {
-							callback(uint(index), any.GetValue())
 						}
 					}
 				}

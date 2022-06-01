@@ -56,8 +56,9 @@ func NewService(name string, exchanges []string) (mS MessagingService) {
 			}
 		}
 
-		// Add handlers
+		// Add handlers and callbacks
 		mS.handlers = map[string]func(id string, queue uint, bytes []byte){}
+		mS.callbacks = map[string]func(queue uint, bytes []byte){}
 	}
 
 	return

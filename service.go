@@ -57,7 +57,7 @@ func NewService(name string, exchanges []string) (mS MessagingService) {
 		}
 
 		// Add handlers
-		mS.handlers = map[string]func(id string, bytes []byte, index int){}
+		mS.handlers = map[string]func(id string, queue uint, bytes []byte){}
 	}
 
 	return
@@ -121,7 +121,7 @@ func (mS *MessagingService) PublishRouted(routing, exchange string, msg protoref
 }
 
 // Publish without routing or wrapping id
-func (mS *MessagingService) PublishEvent(exchange string, msg protoreflect.ProtoMessage, callback func(bytes []byte, index int)) error {
+func (mS *MessagingService) PublishEvent(exchange string, msg protoreflect.ProtoMessage, callback func(queue uint, bytes []byte)) error {
 	return mS.PublishAdvanced("", "", exchange, msg, callback)
 }
 
@@ -131,7 +131,7 @@ func (mS *MessagingService) PublishResponse(id, exchange string, msg protoreflec
 }
 
 // Publish message
-func (mS *MessagingService) PublishAdvanced(id, routing, exchange string, msg protoreflect.ProtoMessage, callback func(bytes []byte, index int)) error {
+func (mS *MessagingService) PublishAdvanced(id, routing, exchange string, msg protoreflect.ProtoMessage, callback func(queue uint, bytes []byte)) error {
 	// Add callback ID
 	if id == "" {
 		id = uuid.NewString()
@@ -162,7 +162,7 @@ func (mS *MessagingService) PublishAdvanced(id, routing, exchange string, msg pr
 }
 
 // Bind handler to message
-func (mS *MessagingService) Bind(msg protoreflect.ProtoMessage, handler func(id string, bytes []byte, index int)) {
+func (mS *MessagingService) Bind(msg protoreflect.ProtoMessage, handler func(id string, queue uint, bytes []byte)) {
 	any, _ := anypb.New(msg)
 	mS.handlers[any.TypeUrl] = handler
 }
@@ -189,10 +189,10 @@ func (mS MessagingService) Consume() {
 				if id, any, err := unwrap(msg.Body); err == nil {
 					index, _ := strconv.Atoi(msg.RoutingKey)
 					if callback, ok := mS.callbacks[id]; ok {
-						callback(any.GetValue(), index)
+						callback(uint(index), any.GetValue())
 					}
 					if handler, ok := mS.handlers[any.TypeUrl]; ok {
-						handler(id, any.GetValue(), index)
+						handler(id, uint(index), any.GetValue())
 					}
 				}
 			}

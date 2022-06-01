@@ -27,8 +27,15 @@ type Subscription struct {
 	Mode     SubscriptionMode
 }
 
-func callbackExchangeName(exchange string) string {
-	return fmt.Sprint("_callback-", exchange)
+func exchangeName(exchange string, mode SubscriptionMode) string {
+	switch mode {
+	case IN:
+		return "in-" + exchange
+	case OUT:
+		return "out-" + exchange
+	default:
+		return ""
+	}
 }
 
 func NewService(name string, exchanges []Subscription) (mS MessagingService) {
@@ -52,10 +59,10 @@ func NewService(name string, exchanges []Subscription) (mS MessagingService) {
 	// Bind exchanges
 	for _, e := range exchanges {
 		if e.Mode&IN != 0 {
-			mS.newExchange(e.Exchange)
+			mS.newExchange(exchangeName(e.Exchange, IN))
 		}
 		if e.Mode&OUT != 0 {
-			mS.newExchange(callbackExchangeName(e.Exchange))
+			mS.newExchange(exchangeName(e.Exchange, OUT))
 		}
 	}
 
@@ -74,10 +81,10 @@ func NewService(name string, exchanges []Subscription) (mS MessagingService) {
 			// Bind exchanges to these queues
 			for _, e := range exchanges {
 				if e.Mode&IN != 0 {
-					mS.bindQueue(q, e.Exchange, i)
+					mS.bindQueue(q, exchangeName(e.Exchange, IN), i)
 				}
 				if e.Mode&OUT != 0 {
-					mS.bindQueue(q, callbackExchangeName(e.Exchange), i)
+					mS.bindQueue(q, exchangeName(e.Exchange, OUT), i)
 				}
 			}
 		}

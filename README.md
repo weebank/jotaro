@@ -19,7 +19,7 @@ message Banana {
 ```
 
 ```protobuf
-// ./pb/banana.proto
+// ./pb/apple.proto
 syntax="proto3";
 
 package main;
@@ -74,7 +74,7 @@ func main() {
 
             fmt.Println("banana received", "yellowness:", banana.GetYellowness(), "queue:", queue)
 
-             // When receive a "Beetle", also publish a "Cow" to "mammals" exchange
+            // When receive a "Beetle", also publish a "Cow" to "mammals" exchange
             service.Publish(&pb.Cow{Milk: true}, "mammals")
         },
     )
@@ -87,7 +87,7 @@ func main() {
 
             fmt.Println("apple received", "redness:", apple.GetRedness(), "queue:", queue)
 
-             // When receive an "Apple", also publish a "Cow" to "mammals" as a callback
+            // When receive an "Apple", also publish a "Cow" to "mammals" as a callback
             service.PublishResponse(id, &pb.Cow{Milk: true}, "mammals")
         },
     )
@@ -100,7 +100,9 @@ func main() {
 
             fmt.Println("spider received", "poison:", spider.GetPoison(), "queue:", queue)
 
-            // When receive a "Spider", also publish a "Cow" to "mammals" exchange, with a callback function
+            // When receive a "Spider", also publish a "Cow" to "mammals" exchange,
+            // specifying a callback function to be called by a service.PublishEvent()
+            // on the other service
             service.PublishEvent(&pb.Cow{Milk: true}, "mammals",
                 func(queue uint, bytes []byte) { fmt.Println("received cow callback") })
         },

@@ -13,6 +13,7 @@ import (
 )
 
 type MessagingService struct {
+	name      string
 	conn      *amqp.Connection
 	ch        *amqp.Channel
 	queues    []amqp.Queue

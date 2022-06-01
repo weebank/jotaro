@@ -12,7 +12,9 @@ import (
 	"google.golang.org/protobuf/types/known/anypb"
 )
 
-func NewService(exchanges ...string) (mS MessagingService) {
+func NewService(name string, exchanges ...string) (mS MessagingService) {
+	mS.name = name
+
 	conn, err := amqp.Dial("amqp://guest:guest@localhost:5672/")
 	if err != nil {
 		log.Fatalf("couldn't connect to RabbitMQ: %s", err.Error())
@@ -30,7 +32,7 @@ func NewService(exchanges ...string) (mS MessagingService) {
 	}
 
 	for i := 0; i < runtime.NumCPU(); i++ {
-		q := mS.newQueue()
+		q := mS.newQueue(i)
 		for _, e := range exchanges {
 			mS.bindQueue(q, e, i)
 		}
@@ -41,14 +43,14 @@ func NewService(exchanges ...string) (mS MessagingService) {
 	return
 }
 
-func (mS *MessagingService) newQueue() string {
+func (mS *MessagingService) newQueue(index int) string {
 	q, err := mS.ch.QueueDeclare(
-		"",    // name
-		true,  // durable
-		true,  // auto-deleted
-		true,  // exclusive
-		false, // no-wait
-		nil,   // arguments
+		fmt.Sprint(mS.name, "-", index), // name
+		true,                            // durable
+		false,                           // auto-deleted
+		false,                           // exclusive
+		false,                           // no-wait
+		nil,                             // arguments
 	)
 	if err != nil {
 		log.Fatalf("couldn't declare a RabbitMQ queue: %s", err.Error())
@@ -63,8 +65,8 @@ func (mS MessagingService) newExchange(exchange string) {
 	err := mS.ch.ExchangeDeclare(
 		exchange, // name
 		"direct", // type
-		false,    // durable
-		true,     // auto-deleted
+		true,     // durable
+		false,    // auto-deleted
 		false,    // internal
 		false,    // no-wait
 		nil,      // arguments

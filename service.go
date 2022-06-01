@@ -14,43 +14,55 @@ import (
 )
 
 func NewService(name string, exchanges []string) (mS MessagingService) {
-	mS.name = name
-
-	mS.queues = 8
-	if str, ok := os.LookupEnv("QUEUE_COUNT"); ok {
-		if count, err := strconv.Atoi(str); err == nil {
-			mS.queues = uint(count)
-		}
-	}
-
+	// Create RabbitMQ connection
 	conn, err := amqp.Dial("amqp://guest:guest@localhost:5672/")
 	if err != nil {
 		log.Fatalf("couldn't connect to RabbitMQ: %s", err.Error())
 	}
 	mS.conn = conn
 
+	// Create RabbitMQ channel
 	ch, err := conn.Channel()
 	if err != nil {
 		log.Fatalf("couldn't open a RabbitMQ channel: %s", err.Error())
 	}
 	mS.ch = ch
 
+	// Set service name
+	mS.name = name
+
+	// Bind exchanges
 	for _, e := range exchanges {
 		mS.newExchange(e)
 	}
 
-	for i := 0; i < runtime.NumCPU(); i++ {
-		q := mS.newQueue(i)
-		for _, e := range exchanges {
-			mS.bindQueue(q, e, i)
+	// Create queues
+	if len(exchanges) > 0 {
+		// Load queue count preference from env
+		mS.queues = 8
+		if str, ok := os.LookupEnv("QUEUE_COUNT"); ok {
+			if count, err := strconv.Atoi(str); err == nil {
+				mS.queues = uint(count)
+			}
 		}
-	}
 
-	mS.handlers = map[string]func(id string, bytes []byte, index int){}
+		// Create runtime.NumCPU() queues
+		for i := 0; i < runtime.NumCPU(); i++ {
+			q := mS.newQueue(i)
+			// Bind exchanges to these queues
+			for _, e := range exchanges {
+				mS.bindQueue(q, e, i)
+			}
+		}
+
+		// Add handlers
+		mS.handlers = map[string]func(id string, bytes []byte, index int){}
+	}
 
 	return
 }
 
+// Create queue on service
 func (mS *MessagingService) newQueue(index int) string {
 	q, err := mS.ch.QueueDeclare(
 		fmt.Sprint(mS.name, "-", index), // name
@@ -67,6 +79,7 @@ func (mS *MessagingService) newQueue(index int) string {
 	return q.Name
 }
 
+// Bind exchange to service
 func (mS MessagingService) newExchange(exchange string) {
 	err := mS.ch.ExchangeDeclare(
 		exchange, // name
@@ -82,6 +95,7 @@ func (mS MessagingService) newExchange(exchange string) {
 	}
 }
 
+// Bind queue to exchange
 func (mS MessagingService) bindQueue(queue string, exchange string, index int) {
 	err := mS.ch.QueueBind(
 		queue,             // queue name
@@ -146,11 +160,13 @@ func (mS *MessagingService) PublishAdvanced(id, routing, exchange string, msg pr
 	return err
 }
 
+// Bind handler to message
 func (mS *MessagingService) Bind(msg protoreflect.ProtoMessage, handler func(id string, bytes []byte, index int)) {
 	any, _ := anypb.New(msg)
 	mS.handlers[any.TypeUrl] = handler
 }
 
+// Start consuming queues
 func (mS MessagingService) Consume() {
 	forever := make(chan struct{})
 	for i := uint(0); i < mS.queues; i++ {
@@ -184,6 +200,7 @@ func (mS MessagingService) Consume() {
 	<-forever
 }
 
+// Close connection
 func (mS *MessagingService) Close() {
 	mS.ch.Close()
 	mS.conn.Close()

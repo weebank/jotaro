@@ -15,9 +15,16 @@ import (
 
 var queues = uint(8)
 
+type SubscriptionMode uint8
+
+const (
+	IN  SubscriptionMode = 1
+	OUT SubscriptionMode = 2
+)
+
 type Subscription struct {
-	Exchange       string
-	AllowCallbacks bool
+	Exchange string
+	Mode     SubscriptionMode
 }
 
 func callbackExchangeName(exchange string) string {
@@ -44,8 +51,10 @@ func NewService(name string, exchanges []Subscription) (mS MessagingService) {
 
 	// Bind exchanges
 	for _, e := range exchanges {
-		mS.newExchange(e.Exchange)
-		if e.AllowCallbacks {
+		if e.Mode&IN != 0 {
+			mS.newExchange(e.Exchange)
+		}
+		if e.Mode&OUT != 0 {
 			mS.newExchange(callbackExchangeName(e.Exchange))
 		}
 	}
@@ -64,15 +73,17 @@ func NewService(name string, exchanges []Subscription) (mS MessagingService) {
 			q := mS.newQueue(i)
 			// Bind exchanges to these queues
 			for _, e := range exchanges {
-				mS.bindQueue(q, e.Exchange, i)
-				if e.AllowCallbacks {
+				if e.Mode&IN != 0 {
+					mS.bindQueue(q, e.Exchange, i)
+				}
+				if e.Mode&OUT != 0 {
 					mS.bindQueue(q, callbackExchangeName(e.Exchange), i)
 				}
 			}
 		}
 
 		// Add handlers and callbacks
-		mS.handlers = map[string]func(queue uint, bytes []byte) protoreflect.ProtoMessage{}
+		mS.handlers = map[string]func(queue uint, bytes []byte) *Response{}
 		mS.callbacks = map[string]func(queue uint, bytes []byte){}
 	}
 
@@ -132,8 +143,8 @@ func (mS *MessagingService) Publish(exchange string, msg protoreflect.ProtoMessa
 }
 
 // Publish without callback, or wrapping id
-func (mS *MessagingService) PublishRouted(routing, exchange string, msg protoreflect.ProtoMessage) error {
-	return mS.PublishAdvanced("", routing, exchange, msg, nil)
+func (mS *MessagingService) PublishRouted(route, exchange string, msg protoreflect.ProtoMessage) error {
+	return mS.PublishAdvanced("", route, exchange, msg, nil)
 }
 
 // Publish without routing or wrapping id
@@ -141,21 +152,16 @@ func (mS *MessagingService) PublishEvent(exchange string, msg protoreflect.Proto
 	return mS.PublishAdvanced("", "", exchange, msg, callback)
 }
 
-// Publish without callback or routing
-func (mS *MessagingService) PublishResponse(id, exchange string, msg protoreflect.ProtoMessage) error {
-	return mS.PublishAdvanced(id, "", exchange, msg, nil)
-}
-
 // Publish message
-func (mS *MessagingService) PublishAdvanced(id, routing, exchange string, msg protoreflect.ProtoMessage, callback func(queue uint, bytes []byte)) error {
+func (mS *MessagingService) PublishAdvanced(id, route, exchange string, msg protoreflect.ProtoMessage, callback func(queue uint, bytes []byte)) error {
 	// Add callback ID
 	if id == "" {
 		id = uuid.NewString()
 	}
 
 	// Add routing key
-	if routing == "" {
-		routing = uuid.NewString()
+	if route == "" {
+		route = uuid.NewString()
 	}
 
 	// Set callback
@@ -165,10 +171,10 @@ func (mS *MessagingService) PublishAdvanced(id, routing, exchange string, msg pr
 
 	// Publish message
 	err := mS.ch.Publish(
-		exchange,                                // exchange
-		fmt.Sprint(queueIndex(routing, queues)), // routing key
-		false,                                   // mandatory
-		false,                                   // immediate
+		exchange,                              // exchange
+		fmt.Sprint(queueIndex(route, queues)), // routing key
+		false,                                 // mandatory
+		false,                                 // immediate
 		amqp.Publishing{
 			ContentType: "text/plain",
 			Body:        wrap(id, msg),
@@ -178,7 +184,7 @@ func (mS *MessagingService) PublishAdvanced(id, routing, exchange string, msg pr
 }
 
 // Bind handler to message
-func (mS *MessagingService) Bind(msg protoreflect.ProtoMessage, handler func(queue uint, bytes []byte) protoreflect.ProtoMessage) {
+func (mS *MessagingService) Bind(msg protoreflect.ProtoMessage, handler func(queue uint, bytes []byte) *Response) {
 	any, _ := anypb.New(msg)
 	mS.handlers[any.TypeUrl] = handler
 }
@@ -209,7 +215,7 @@ func (mS MessagingService) Consume() {
 					}
 					if handler, ok := mS.handlers[any.TypeUrl]; ok {
 						if res := handler(uint(index), any.GetValue()); res != nil {
-							mS.PublishResponse(id, callbackExchangeName(msg.Exchange), res)
+							mS.PublishAdvanced(id, res.Route, msg.Exchange, res.Message, nil)
 						}
 					}
 				}

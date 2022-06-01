@@ -10,11 +10,16 @@ import (
 	"google.golang.org/protobuf/types/known/anypb"
 )
 
+type Response struct {
+	Route   string
+	Message protoreflect.ProtoMessage
+}
+
 type MessagingService struct {
 	name      string
 	conn      *amqp.Connection
 	ch        *amqp.Channel
-	handlers  map[string]func(queue uint, bytes []byte) protoreflect.ProtoMessage
+	handlers  map[string]func(queue uint, bytes []byte) *Response
 	callbacks map[string]func(queue uint, bytes []byte)
 }
 

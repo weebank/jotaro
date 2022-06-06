@@ -15,37 +15,32 @@ type Response struct {
 	Message protoreflect.ProtoMessage
 }
 
-type Handler struct {
-	Function       func(bytes []byte) *Response
-	BlockCallbacks bool
-}
-
 type MessagingService struct {
 	name      string
 	conn      *amqp.Connection
 	ch        *amqp.Channel
-	handlers  map[string]Handler
+	handlers  map[string]func(bytes []byte) *Response
 	callbacks map[string]func(bytes []byte)
 }
 
-func unwrap(bytes []byte) (id string, isCallback bool, any *anypb.Any, err error) {
+func unwrap(bytes []byte) (id string, isCallback bool, blockCallback bool, any *anypb.Any, err error) {
 	wrapping := &pb.Wrapping{}
 	if err := proto.Unmarshal(bytes, wrapping); err != nil {
-		return "", false, nil, err
+		return "", false, false, nil, err
 	}
 
 	any = &anypb.Any{}
 	if err := proto.Unmarshal(wrapping.Body, any); err != nil {
-		return wrapping.GetId(), wrapping.GetIsCallback(), nil, err
+		return wrapping.GetId(), wrapping.GetIsCallback(), wrapping.GetBlockCallback(), nil, err
 	}
 
-	return wrapping.GetId(), wrapping.GetIsCallback(), any, nil
+	return wrapping.GetId(), wrapping.GetIsCallback(), wrapping.GetBlockCallback(), any, nil
 }
 
-func wrap(id string, isCallback bool, msg protoreflect.ProtoMessage) []byte {
+func wrap(id string, isCallback bool, blockCallback bool, msg protoreflect.ProtoMessage) []byte {
 	any, _ := anypb.New(msg)
 	body, _ := proto.Marshal(any)
-	wrapping := &pb.Wrapping{Id: id, IsCallback: isCallback, Body: body}
+	wrapping := &pb.Wrapping{Id: id, IsCallback: isCallback, BlockCallback: blockCallback, Body: body}
 	bytes, _ := proto.Marshal(wrapping)
 
 	return bytes

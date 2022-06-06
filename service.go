@@ -59,7 +59,7 @@ func NewService(name string, exchanges []string) (mS MessagingService) {
 		}
 
 		// Add handlers and callbacks
-		mS.handlers = map[string]Handler{}
+		mS.handlers = map[string]func(bytes []byte) *Response{}
 		mS.callbacks = map[string]func(bytes []byte){}
 	}
 
@@ -154,14 +154,14 @@ func (mS *MessagingService) PublishAdvanced(id, route, exchange string, msg prot
 		false,                                 // immediate
 		amqp.Publishing{
 			ContentType: "text/plain",
-			Body:        wrap(id, isCallback, msg),
+			Body:        wrap(id, isCallback, callback == nil, msg),
 		})
 
 	return err
 }
 
 // Bind handler to message
-func (mS *MessagingService) Bind(msg protoreflect.ProtoMessage, handler Handler) {
+func (mS *MessagingService) Bind(msg protoreflect.ProtoMessage, handler func(bytes []byte) *Response) {
 	any, _ := anypb.New(msg)
 	mS.handlers[any.TypeUrl] = handler
 }
@@ -185,14 +185,14 @@ func (mS MessagingService) Consume() {
 			}
 
 			for msg := range msgs {
-				if id, isCallback, any, err := unwrap(msg.Body); err == nil {
+				if id, isCallback, blockCallback, any, err := unwrap(msg.Body); err == nil {
 					if isCallback {
 						if callback, ok := mS.callbacks[id]; ok {
 							callback(any.GetValue())
 						}
 					} else {
-						if handler, ok := mS.handlers[any.TypeUrl]; ok {
-							if res := handler.Function(any.GetValue()); res != nil && !handler.BlockCallbacks {
+						if handler, ok := mS.handlers[any.TypeUrl]; ok && !blockCallback {
+							if res := handler(any.GetValue()); res != nil {
 								mS.PublishAdvanced(id, res.Route, msg.Exchange, res.Message, nil)
 							}
 						}

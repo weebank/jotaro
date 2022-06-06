@@ -15,11 +15,16 @@ type Response struct {
 	Message protoreflect.ProtoMessage
 }
 
+type Handler struct {
+	Function       func(bytes []byte) *Response
+	BlockCallbacks bool
+}
+
 type MessagingService struct {
 	name      string
 	conn      *amqp.Connection
 	ch        *amqp.Channel
-	handlers  map[string]func(bytes []byte) *Response
+	handlers  map[string]Handler
 	callbacks map[string]func(bytes []byte)
 }
 

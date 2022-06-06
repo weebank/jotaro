@@ -59,7 +59,7 @@ func NewService(name string, exchanges []string) (mS MessagingService) {
 		}
 
 		// Add handlers and callbacks
-		mS.handlers = map[string]func(bytes []byte) *Response{}
+		mS.handlers = map[string]Handler{}
 		mS.callbacks = map[string]func(bytes []byte){}
 	}
 
@@ -161,7 +161,7 @@ func (mS *MessagingService) PublishAdvanced(id, route, exchange string, msg prot
 }
 
 // Bind handler to message
-func (mS *MessagingService) Bind(msg protoreflect.ProtoMessage, handler func(bytes []byte) *Response) {
+func (mS *MessagingService) Bind(msg protoreflect.ProtoMessage, handler Handler) {
 	any, _ := anypb.New(msg)
 	mS.handlers[any.TypeUrl] = handler
 }
@@ -192,7 +192,7 @@ func (mS MessagingService) Consume() {
 						}
 					} else {
 						if handler, ok := mS.handlers[any.TypeUrl]; ok {
-							if res := handler(any.GetValue()); res != nil {
+							if res := handler.Function(any.GetValue()); res != nil && !handler.BlockCallbacks {
 								mS.PublishAdvanced(id, res.Route, msg.Exchange, res.Message, nil)
 							}
 						}

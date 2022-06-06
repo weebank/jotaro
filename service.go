@@ -191,8 +191,8 @@ func (mS MessagingService) Consume() {
 							callback(any.GetValue())
 						}
 					} else {
-						if handler, ok := mS.handlers[any.TypeUrl]; ok && !blockCallback {
-							if res := handler(any.GetValue()); res != nil {
+						if handler, ok := mS.handlers[any.TypeUrl]; ok {
+							if res := handler(any.GetValue()); res != nil && !blockCallback {
 								mS.PublishAdvanced(id, res.Route, msg.Exchange, res.Message, nil)
 							}
 						}

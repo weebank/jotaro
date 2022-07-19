@@ -88,7 +88,7 @@ func main() {
             fmt.Println("apple received", "redness:", apple.GetRedness())
 
             // When receive an "Apple", publish a "Cow" to "mammals" exchange
-            service.Publish(&pb.Cow{Milk: true}, "mammals")
+            service.Publish("mammals", &pb.Cow{Milk: true})
 
             return nil
         },
@@ -104,7 +104,7 @@ func main() {
 
             // When receive a "Spider", also publish a "Cow" to "mammals" exchange,
             // specifying a callback function to be called by another service
-            service.PublishEvent(&pb.Cow{Milk: true}, "mammals",
+            service.PublishEvent("mammals", &pb.Cow{Milk: true},
                 func(bytes []byte) { fmt.Println("received cow callback") })
 
             return nil

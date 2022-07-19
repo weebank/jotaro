@@ -60,7 +60,7 @@ func NewService(name string, exchanges []string) (mS MessagingService) {
 
 		// Add handlers and callbacks
 		mS.handlers = map[string]func(bytes []byte) *Response{}
-		mS.callbacks = map[string]func(bytes []byte){}
+		mS.callbacks = map[string]chan []byte{}
 	}
 
 	return
@@ -115,21 +115,17 @@ func (mS MessagingService) bindQueue(queue string, exchange string, index int) {
 
 // Publish without callback, routing or wrapping id
 func (mS *MessagingService) Publish(exchange string, msg protoreflect.ProtoMessage) error {
-	return mS.PublishAdvanced("", "", exchange, msg, nil)
-}
-
-// Publish without callback, or wrapping id
-func (mS *MessagingService) PublishRouted(route, exchange string, msg protoreflect.ProtoMessage) error {
-	return mS.PublishAdvanced("", route, exchange, msg, nil)
+	_, err := mS.PublishAdvanced("", "", exchange, msg, true)
+	return err
 }
 
 // Publish without routing or wrapping id
-func (mS *MessagingService) PublishEvent(exchange string, msg protoreflect.ProtoMessage, callback func(bytes []byte)) error {
-	return mS.PublishAdvanced("", "", exchange, msg, callback)
+func (mS *MessagingService) PublishEvent(exchange string, msg protoreflect.ProtoMessage) (<-chan []byte, error) {
+	return mS.PublishAdvanced("", "", exchange, msg, false)
 }
 
 // Publish message
-func (mS *MessagingService) PublishAdvanced(id, route, exchange string, msg protoreflect.ProtoMessage, callback func(bytes []byte)) error {
+func (mS *MessagingService) PublishAdvanced(id, route, exchange string, msg protoreflect.ProtoMessage, blockCallback bool) (<-chan []byte, error) {
 	// Add callback ID if needed
 	isCallback := id != ""
 	if !isCallback {
@@ -141,11 +137,6 @@ func (mS *MessagingService) PublishAdvanced(id, route, exchange string, msg prot
 		route = uuid.NewString()
 	}
 
-	// Set callback
-	if callback != nil {
-		mS.callbacks[id] = callback
-	}
-
 	// Publish message
 	err := mS.ch.Publish(
 		exchange,                              // exchange
@@ -154,10 +145,19 @@ func (mS *MessagingService) PublishAdvanced(id, route, exchange string, msg prot
 		false,                                 // immediate
 		amqp.Publishing{
 			ContentType: "text/plain",
-			Body:        wrap(id, isCallback, callback == nil, msg),
-		})
+			Body:        wrap(id, isCallback, blockCallback, msg),
+		},
+	)
 
-	return err
+	// Return channel if callback is needed
+	if err != nil || blockCallback {
+		return nil, err
+	}
+
+	// Set callback
+	mS.callbacks[id] = make(chan []byte)
+
+	return mS.callbacks[id], nil
 }
 
 // Bind handler to message
@@ -188,12 +188,12 @@ func (mS MessagingService) Consume() {
 				if id, isCallback, blockCallback, any, err := unwrap(msg.Body); err == nil {
 					if isCallback {
 						if callback, ok := mS.callbacks[id]; ok {
-							callback(any.GetValue())
+							callback <- any.GetValue()
 						}
 					} else {
 						if handler, ok := mS.handlers[any.TypeUrl]; ok {
 							if res := handler(any.GetValue()); res != nil && !blockCallback {
-								mS.PublishAdvanced(id, res.Route, msg.Exchange, res.Message, nil)
+								mS.PublishAdvanced(id, res.Route, msg.Exchange, res.Message, true)
 							}
 						}
 					}

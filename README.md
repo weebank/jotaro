@@ -104,8 +104,8 @@ func main() {
 
             // When receive a "Spider", also publish a "Cow" to "mammals" exchange,
             // specifying a callback function to be called by another service
-            service.PublishEvent("mammals", &pb.Cow{Milk: true},
-                func(bytes []byte) { fmt.Println("received cow callback") })
+            ch, _ := service.PublishEvent("mammals", &pb.Cow{Milk: true})
+            fmt.Println("callback received", "bytes:", <-ch)
 
             return nil
         },

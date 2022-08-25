@@ -3,6 +3,7 @@ package producer
 import (
 	"math/rand"
 	"os"
+	"sync"
 	"time"
 
 	apexLogger "github.com/apex/log"
@@ -22,7 +23,7 @@ var initialPokémons = []string{
 	"squirtle",
 }
 
-func Main() {
+func Main(count uint) {
 	// Set random seed
 	rand.Seed(time.Now().Unix())
 
@@ -30,18 +31,29 @@ func Main() {
 	comm := msg.NewService("producer")
 	defer comm.Close()
 
+	// Set a Wait Group so the program starts to receive
+	// pokémons only after they were sent
+	wg := sync.WaitGroup{}
+
 	// Send messages to "pokémons"
-	for i := 0; i < 10000; i++ {
-		// Build message
-		pokémon := shared.Pokémon{
-			Name: initialPokémons[rand.Intn(len(initialPokémons))],
-		}
-		err := comm.Publish(consumerShared.Service, consumerShared.EventEvolvePokémon, pokémon)
-		if err != nil {
-			logger.WithError(err).Error("error sending pokémon")
-		}
-		logger.WithField("pokémon", pokémon.Name).Info("sent")
+	for i := 0; i < int(count); i++ {
+		wg.Add(1)
+
+		go func() {
+			// Build message
+			pokémon := shared.Pokémon{
+				Name: initialPokémons[rand.Intn(len(initialPokémons))],
+			}
+			err := comm.Publish(consumerShared.Service, consumerShared.EventEvolvePokémon, pokémon)
+			if err != nil {
+				logger.WithError(err).Error("error sending pokémon")
+			}
+			logger.WithField("pokémon", pokémon.Name).Info("sent")
+
+			wg.Done()
+		}()
 	}
+	wg.Wait()
 
 	// Set handler
 	comm.On(consumerShared.EventEvolvePokémon,

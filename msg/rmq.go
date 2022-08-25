@@ -2,7 +2,6 @@ package msg
 
 import (
 	"context"
-	"log"
 
 	amqp "github.com/rabbitmq/amqp091-go"
 )
@@ -17,12 +16,12 @@ func connect() Channel {
 	// Create RabbitMQ connection
 	conn, err := amqp.Dial("amqp://guest:guest@localhost:5672/")
 	if err != nil {
-		log.Fatalf("couldn't connect to RabbitMQ: %s", err.Error())
+		logger.WithError(err).Error("couldn't connect to RabbitMQ")
 	}
 	// Create RabbitMQ channel
 	ch, err := conn.Channel()
 	if err != nil {
-		log.Fatalf("couldn't open a RabbitMQ channel: %s", err.Error())
+		logger.WithError(err).Error("couldn't open a RabbitMQ channel")
 	}
 	return Channel{conn, ch}
 }
@@ -38,7 +37,7 @@ func (c Channel) newQueue(name string) {
 		nil,   // arguments
 	)
 	if err != nil {
-		log.Fatalf("couldn't declare RabbitMQ queue: %s", err.Error())
+		logger.WithError(err).Error("couldn't declare RabbitMQ queue")
 	}
 }
 
@@ -54,7 +53,7 @@ func (c Channel) consumeQueue(name string) <-chan amqp.Delivery {
 		nil,   // args
 	)
 	if err != nil {
-		log.Fatal("couldn't consume RabbitMQ queue:", err)
+		logger.WithError(err).Error("couldn't consume RabbitMQ queue")
 	}
 
 	return msgs

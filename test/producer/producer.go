@@ -1,14 +1,20 @@
 package producer
 
 import (
-	"fmt"
 	"math/rand"
+	"os"
 	"time"
 
+	apexLogger "github.com/apex/log"
+	"github.com/apex/log/handlers/cli"
 	"github.com/weebank/jotaro/msg"
 	consumerShared "github.com/weebank/jotaro/test/consumer/shared"
 	"github.com/weebank/jotaro/test/producer/shared"
 )
+
+var logger = apexLogger.Logger{
+	Handler: cli.New(os.Stdout),
+}
 
 var initialPokémons = []string{
 	"bulbasaur",
@@ -25,16 +31,16 @@ func Main() {
 	defer comm.Close()
 
 	// Send messages to "pokémons"
-	for i := 0; i < 500000; i++ {
+	for i := 0; i < 10000; i++ {
 		// Build message
 		pokémon := shared.Pokémon{
 			Name: initialPokémons[rand.Intn(len(initialPokémons))],
 		}
 		err := comm.Publish(consumerShared.Service, consumerShared.EventEvolvePokémon, pokémon)
 		if err != nil {
-			fmt.Println("error sending pokémon:", err)
+			logger.WithError(err).Error("error sending pokémon")
 		}
-		fmt.Println("pokémon sent:", pokémon.Name)
+		logger.WithField("pokémon", pokémon.Name).Info("sent")
 	}
 
 	// Set handler
@@ -43,7 +49,7 @@ func Main() {
 			// Receive message from "consumer"
 			pokémon := &shared.Pokémon{}
 			m.Bind(pokémon)
-			fmt.Println("pokémon received:", pokémon.Name)
+			logger.WithField("pokémon", pokémon.Name).Info("received")
 
 			return nil, nil
 		},

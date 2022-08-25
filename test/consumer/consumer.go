@@ -1,12 +1,18 @@
 package consumer
 
 import (
-	"fmt"
+	"os"
 
+	apexLogger "github.com/apex/log"
+	"github.com/apex/log/handlers/cli"
 	"github.com/weebank/jotaro/msg"
 	"github.com/weebank/jotaro/test/consumer/shared"
 	producerShared "github.com/weebank/jotaro/test/producer/shared"
 )
+
+var logger = apexLogger.Logger{
+	Handler: cli.New(os.Stdout),
+}
 
 var pokémonEvolutions = map[string]string{
 	"bulbasaur":  "ivysaur",
@@ -25,17 +31,18 @@ func Main() {
 			// Receive messages from "producer"
 			pokémon := &producerShared.Pokémon{}
 			m.Bind(pokémon)
-			fmt.Println("pokémon received:", pokémon.Name)
+			logger.WithField("pokémon", pokémon.Name).Info("received")
 
 			// Evolve pokémon
 			pokémon.Name = pokémonEvolutions[pokémon.Name]
 
 			// Return to producer
+			logger.WithField("pokémon", pokémon.Name).Info("sent")
 			return pokémon, nil
 		},
 	)
 
 	// Consume messages
-	fmt.Println("awaiting for pokémons...")
+	logger.Info("awaiting for pokémons")
 	comm.Consume()
 }

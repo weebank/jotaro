@@ -2,7 +2,6 @@ package msg
 
 import (
 	"encoding/json"
-	"log"
 	"runtime"
 )
 
@@ -73,13 +72,13 @@ func (mS *MessagingService) Consume() {
 				// Unwrap message
 				m, err := unwrap(msg.Body)
 				if err != nil {
-					log.Println("couldn't unwrap received message", m)
+					logger.WithField("message", m).Error("couldn't unwrap received message")
 					continue
 				}
 				// Call handler func
 				handler, ok := mS.handlers[m.event]
 				if !ok {
-					log.Println("received event \"" + m.event + "\" has no assigned handler")
+					logger.WithField("event", m).Error("received event has no assigned handler")
 					continue
 				}
 				res, err := handler(m)

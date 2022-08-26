@@ -27,10 +27,10 @@ func Main() {
 
 	// Set handler
 	comm.On(shared.EventEvolvePokémon,
-		func(m *msg.Message) {
+		func(m msg.Message) {
 			// Receive messages from "producer"
 			pokémon := new(producer.Pokémon)
-			m.BindLatest(pokémon)
+			m.Bind(pokémon)
 
 			logger.WithField("pokémon", pokémon.Name).Info("received")
 
@@ -40,7 +40,7 @@ func Main() {
 			logger.WithField("pokémon", pokémon.Name).Info("sent")
 
 			// Prepare message to send it back to producer
-			m.Prepare(producer.EventReceivePokémon, producer.Service)
+			comm.Publish(m, producer.Service, producer.EventReceivePokémon, pokémon)
 		},
 	)
 

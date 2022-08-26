@@ -39,19 +39,19 @@ func (m Message) Event() string {
 	return m.event
 }
 
-// Prepare Message
-func (m *Message) Prepare(event, target string) {
+// Forward Message
+func (m *Message) Forward(event, target string) {
 	m.event = event
 	m.target = target
 }
 
 // Bind payload object related to current event
-func (m Message) BindLatest(v any) error {
+func (m Message) Bind(v any) error {
 	return json.Unmarshal(m.payload[m.event], v)
 }
 
 // Bind payload object
-func (m Message) Bind(k string, v any) error {
+func (m Message) BindPrevious(k string, v any) error {
 	return json.Unmarshal(m.payload[k], v)
 }
 

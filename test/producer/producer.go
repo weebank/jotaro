@@ -44,7 +44,7 @@ func Main(count uint) {
 			pokémon := shared.Pokémon{
 				Name: initialPokémons[rand.Intn(len(initialPokémons))],
 			}
-			err := comm.Publish(consumer.Service, consumer.EventEvolvePokémon, pokémon)
+			err := comm.Publish(msg.Message{}, consumer.Service, consumer.EventEvolvePokémon, pokémon)
 			if err != nil {
 				logger.WithError(err).Error("error sending pokémon")
 			}
@@ -56,11 +56,11 @@ func Main(count uint) {
 	wg.Wait()
 
 	// Set handler
-	comm.On(consumer.EventEvolvePokémon,
-		func(m *msg.Message) {
+	comm.On(shared.EventReceivePokémon,
+		func(m msg.Message) {
 			// Receive message from "consumer"
 			pokémon := new(shared.Pokémon)
-			m.BindLatest(pokémon)
+			m.Bind(pokémon)
 
 			logger.WithField("pokémon", pokémon.Name).Info("received")
 		},

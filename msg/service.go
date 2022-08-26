@@ -10,7 +10,7 @@ import (
 type MessagingService struct {
 	name     string
 	channel  Channel
-	handlers map[string]func(m *Message)
+	handlers map[string]func(m Message)
 }
 
 // Initialize Messaging Service
@@ -27,7 +27,7 @@ func NewService(name string) (mS *MessagingService) {
 	mS.channel.newQueue(mS.name)
 
 	// Add handlers, callbacks and subscriptions
-	mS.handlers = make(map[string]func(m *Message))
+	mS.handlers = make(map[string]func(m Message))
 
 	return
 }
@@ -48,7 +48,7 @@ func publish(mS *MessagingService, target, event string, payload map[string][]by
 }
 
 // Publish Message
-func (mS *MessagingService) Publish(target, event string, content any) error {
+func (mS *MessagingService) Publish(base Message, target, event string, content any) error {
 	// Check validity of event and target
 	if event == "" {
 		return errors.New("\"event\" cannot be blank")
@@ -63,11 +63,18 @@ func (mS *MessagingService) Publish(target, event string, content any) error {
 		return err
 	}
 
-	return publish(mS, target, event, map[string][]byte{event: body}, nil)
+	// Build/append to payload
+	payload := base.payload
+	if payload == nil {
+		payload = make(map[string][]byte)
+	}
+	payload[event] = body
+
+	return publish(mS, target, event, payload, nil)
 }
 
 // Bind handler
-func (mS *MessagingService) On(event string, function func(m *Message)) {
+func (mS *MessagingService) On(event string, function func(m Message)) {
 	mS.handlers[event] = function
 }
 
@@ -87,18 +94,12 @@ func (mS *MessagingService) Consume() {
 				// Call handler func
 				handler, ok := mS.handlers[m.event]
 				if !ok {
-					logger.WithField("event", m).Error("received event has no assigned handler")
+					logger.WithField("event", m.event).Error("received event has no assigned handler")
 					continue
 				}
 
 				// Store event and call handler
-				event := m.event
-				handler(&m)
-
-				// Send another message
-				if event != m.event {
-					publish(mS, m.origin, event, m.payload, err)
-				}
+				handler(m)
 
 				// Acknowledge
 				msg.Ack(false)

@@ -9,7 +9,7 @@ import (
 	apexLogger "github.com/apex/log"
 	"github.com/apex/log/handlers/cli"
 	"github.com/weebank/jotaro/msg"
-	consumerShared "github.com/weebank/jotaro/test/consumer/shared"
+	consumer "github.com/weebank/jotaro/test/consumer/shared"
 	"github.com/weebank/jotaro/test/producer/shared"
 )
 
@@ -44,7 +44,7 @@ func Main(count uint) {
 			pokémon := shared.Pokémon{
 				Name: initialPokémons[rand.Intn(len(initialPokémons))],
 			}
-			err := comm.Publish(consumerShared.Service, consumerShared.EventEvolvePokémon, pokémon)
+			err := comm.Publish(consumer.Service, consumer.EventEvolvePokémon, pokémon)
 			if err != nil {
 				logger.WithError(err).Error("error sending pokémon")
 			}
@@ -56,14 +56,13 @@ func Main(count uint) {
 	wg.Wait()
 
 	// Set handler
-	comm.On(consumerShared.EventEvolvePokémon,
-		func(m msg.Message) (any, error) {
+	comm.On(consumer.EventEvolvePokémon,
+		func(m *msg.Message) {
 			// Receive message from "consumer"
-			pokémon := &shared.Pokémon{}
-			m.Bind(pokémon)
-			logger.WithField("pokémon", pokémon.Name).Info("received")
+			pokémon := new(shared.Pokémon)
+			m.BindLatest(pokémon)
 
-			return nil, nil
+			logger.WithField("pokémon", pokémon.Name).Info("received")
 		},
 	)
 

@@ -5,6 +5,12 @@ import (
 	"errors"
 )
 
+// Payload object
+type payloadObject struct {
+	Content []byte
+	Err     error
+}
+
 // Message struct
 type Message struct {
 	id      string
@@ -12,7 +18,7 @@ type Message struct {
 	origin  string
 	event   string
 	target  string
-	payload map[string][]byte
+	payload map[string]payloadObject
 }
 
 // Internal message struct
@@ -21,7 +27,7 @@ type message struct {
 	Err     string
 	Origin  string
 	Event   string
-	Payload map[string][]byte
+	Payload map[string]payloadObject
 }
 
 // Get ID
@@ -47,21 +53,21 @@ func (m *Message) Forward(event, target string) {
 
 // Bind payload object related to current event
 func (m Message) Bind(v any) error {
-	return json.Unmarshal(m.payload[m.event], v)
+	return m.BindPrevious(m.event, v)
 }
 
 // Bind payload object
 func (m Message) BindPrevious(k string, v any) error {
-	return json.Unmarshal(m.payload[k], v)
+	err := json.Unmarshal(m.payload[k].Content, v)
+	if err != nil {
+		return err
+	}
+	return m.payload[m.event].Err
 }
 
 // Export fields
 func (m Message) exportFields() message {
-	err := ""
-	if m.err != nil {
-		err = m.err.Error()
-	}
-	return message{ID: m.id, Err: err, Origin: m.origin, Event: m.event, Payload: m.payload}
+	return message{ID: m.id, Origin: m.origin, Event: m.event, Payload: m.payload}
 }
 
 // Import fields

@@ -33,7 +33,7 @@ func NewService(name string) (mS *MessagingService) {
 }
 
 // Publish Message Internal
-func publish(mS *MessagingService, target, event string, payload map[string][]byte, msgErr error) error {
+func publish(mS *MessagingService, target, event string, payload map[string]payloadObject, msgErr error) error {
 	body, err := Message{err: msgErr, origin: mS.name, event: event, payload: payload}.wrap()
 	if err != nil {
 		return err
@@ -48,7 +48,7 @@ func publish(mS *MessagingService, target, event string, payload map[string][]by
 }
 
 // Publish Message
-func (mS *MessagingService) Publish(base Message, target, event string, content any) error {
+func (mS *MessagingService) Publish(base Message, target, event string, content any, err error) error {
 	// Check validity of event and target
 	if event == "" {
 		return errors.New("\"event\" cannot be blank")
@@ -58,17 +58,17 @@ func (mS *MessagingService) Publish(base Message, target, event string, content 
 	}
 
 	// Marshal content
-	body, err := json.Marshal(content)
-	if err != nil {
+	body, errMarshal := json.Marshal(content)
+	if errMarshal != nil {
 		return err
 	}
 
 	// Build/append to payload
 	payload := base.payload
 	if payload == nil {
-		payload = make(map[string][]byte)
+		payload = make(map[string]payloadObject)
 	}
-	payload[event] = body
+	payload[event] = payloadObject{Content: body, Err: err}
 
 	return publish(mS, target, event, payload, nil)
 }

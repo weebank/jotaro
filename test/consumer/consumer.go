@@ -40,7 +40,7 @@ func Main() {
 			logger.WithField("pokémon", pokémon.Name).Info("sent")
 
 			// Prepare message to send it back to producer
-			comm.Publish(m, producer.Service, producer.EventReceivePokémon, pokémon)
+			comm.Publish(m, producer.Service, producer.EventReceivePokémon, pokémon, nil)
 		},
 	)
 

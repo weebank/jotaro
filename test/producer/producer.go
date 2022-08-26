@@ -44,7 +44,7 @@ func Main(count uint) {
 			pokémon := shared.Pokémon{
 				Name: initialPokémons[rand.Intn(len(initialPokémons))],
 			}
-			err := comm.Publish(msg.Message{}, consumer.Service, consumer.EventEvolvePokémon, pokémon)
+			err := comm.Publish(msg.Message{}, consumer.Service, consumer.EventEvolvePokémon, pokémon, nil)
 			if err != nil {
 				logger.WithError(err).Error("error sending pokémon")
 			}

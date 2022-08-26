@@ -98,3 +98,8 @@ func unwrap(body []byte) (m Message, err error) {
 	m.importFields(M)
 	return
 }
+
+// Build response event
+func ResponseEvent(event, service string) string {
+	return event + "-" + service
+}

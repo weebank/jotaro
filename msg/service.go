@@ -39,7 +39,7 @@ func publish(mS *MessagingService, target, event string, msg any, msgErr error) 
 		return err
 	}
 
-	body, err := Message{err: msgErr, origin: mS.name, event: event, payload: v}.wrap()
+	body, err := Message{err: msgErr, origin: mS.name, event: event, content: v}.wrap()
 	if err != nil {
 		return err
 	}

@@ -7,7 +7,7 @@ import (
 	"github.com/apex/log/handlers/cli"
 	"github.com/weebank/jotaro/msg"
 	"github.com/weebank/jotaro/test/consumer/shared"
-	producerShared "github.com/weebank/jotaro/test/producer/shared"
+	producer "github.com/weebank/jotaro/test/producer/shared"
 )
 
 var logger = apexLogger.Logger{
@@ -27,18 +27,20 @@ func Main() {
 
 	// Set handler
 	comm.On(shared.EventEvolvePokémon,
-		func(m msg.Message) (any, error) {
+		func(m *msg.Message) {
 			// Receive messages from "producer"
-			pokémon := &producerShared.Pokémon{}
-			m.Bind(pokémon)
+			pokémon := new(producer.Pokémon)
+			m.BindLatest(pokémon)
+
 			logger.WithField("pokémon", pokémon.Name).Info("received")
 
 			// Evolve pokémon
 			pokémon.Name = pokémonEvolutions[pokémon.Name]
 
-			// Return to producer
 			logger.WithField("pokémon", pokémon.Name).Info("sent")
-			return pokémon, nil
+
+			// Prepare message to send it back to producer
+			m.Prepare(producer.EventReceivePokémon, producer.Service)
 		},
 	)
 

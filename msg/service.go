@@ -1,7 +1,6 @@
 package msg
 
 import (
-	"encoding/json"
 	"errors"
 	"runtime"
 )
@@ -48,7 +47,7 @@ func publish(mS *MessagingService, target, event string, payload map[string]payl
 }
 
 // Publish Message
-func (mS *MessagingService) Publish(base Message, target, event string, content any, err error) error {
+func (mS *MessagingService) Publish(base forwardableMessage, target, event string, content any, err error) error {
 	// Check validity of event and target
 	if event == "" {
 		return errors.New("\"event\" cannot be blank")
@@ -57,20 +56,27 @@ func (mS *MessagingService) Publish(base Message, target, event string, content 
 		return errors.New("\"to\" cannot be blank")
 	}
 
-	// Marshal content
-	body, errMarshal := json.Marshal(content)
+	// Get message
+	msg, errMarshal := base.toForwardableMessage()
 	if errMarshal != nil {
-		return err
+		return nil
 	}
 
-	// Build/append to payload
-	payload := base.payload
-	if payload == nil {
-		payload = make(map[string]payloadObject)
+	// Build payload if needed
+	if msg.payload == nil {
+		msg.payload = make(map[string]payloadObject)
 	}
-	payload[event] = payloadObject{Content: body, Err: err}
 
-	return publish(mS, target, event, payload, nil)
+	// Build payload object
+	pO, errMarshal := newPayloadObject(content, err)
+	if errMarshal != nil {
+		return errMarshal
+	}
+
+	// Append to payload
+	msg.payload[event] = *pO
+
+	return publish(mS, target, event, msg.payload, nil)
 }
 
 // Bind handler

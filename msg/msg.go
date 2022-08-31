@@ -5,10 +5,26 @@ import (
 	"errors"
 )
 
+// Message interface
+type forwardableMessage interface {
+	toForwardableMessage() (*Message, error)
+}
+
 // Payload object
 type payloadObject struct {
 	Content []byte
 	Err     error
+}
+
+// Initialize Payload Object
+func newPayloadObject(v any, err error) (*payloadObject, error) {
+	// Marshal content
+	body, errMarshal := json.Marshal(v)
+	if errMarshal != nil {
+		return nil, err
+	}
+
+	return &payloadObject{Content: body, Err: err}, nil
 }
 
 // Message struct
@@ -19,6 +35,27 @@ type Message struct {
 	event   string
 	target  string
 	payload map[string]payloadObject
+}
+
+// Message to Forwardable Message
+func (m Message) toForwardableMessage() (*Message, error) {
+	return &m, nil
+}
+
+// Message (with Payload) struct
+type StatefulMessage struct {
+	Event   string
+	Content any
+	Err     error
+}
+
+// Message to Forwardable Message
+func (sM StatefulMessage) toForwardableMessage() (*Message, error) {
+	pO, err := newPayloadObject(sM.Content, sM.Err)
+	if err != nil {
+		return nil, err
+	}
+	return &Message{event: sM.Event, payload: map[string]payloadObject{sM.Event: *pO}}, nil
 }
 
 // Internal message struct
@@ -57,12 +94,12 @@ func (m Message) Bind(v any) error {
 }
 
 // Bind payload object
-func (m Message) BindPrevious(k string, v any) error {
-	err := json.Unmarshal(m.payload[k].Content, v)
+func (m Message) BindPrevious(event string, v any) error {
+	err := json.Unmarshal(m.payload[event].Content, v)
 	if err != nil {
 		return err
 	}
-	return m.payload[m.event].Err
+	return m.payload[event].Err
 }
 
 // Export fields

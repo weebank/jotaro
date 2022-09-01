@@ -47,7 +47,7 @@ func publish(mS *MessagingService, target, event string, payload map[string]payl
 }
 
 // Publish Message
-func (mS *MessagingService) Publish(base forwardableMessage, target, event string, content any, err error) error {
+func (mS *MessagingService) Publish(base forwardableMessage, target, event string, content any, err ...error) error {
 	// Check validity of event and target
 	if event == "" {
 		return errors.New("\"event\" cannot be blank")
@@ -67,8 +67,14 @@ func (mS *MessagingService) Publish(base forwardableMessage, target, event strin
 		msg.payload = make(map[string]payloadObject)
 	}
 
+	// Treat error
+	var errSingle error
+	if len(err) > 0 {
+		errSingle = err[0]
+	}
+
 	// Build payload object
-	pO, errMarshal := newPayloadObject(content, err)
+	pO, errMarshal := newPayloadObject(content, errSingle)
 	if errMarshal != nil {
 		return errMarshal
 	}

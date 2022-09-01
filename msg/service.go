@@ -2,7 +2,6 @@ package msg
 
 import (
 	"errors"
-	"fmt"
 	"runtime"
 )
 
@@ -38,8 +37,6 @@ func publish(mS *MessagingService, target, event string, payload map[string]Payl
 	if err != nil {
 		return err
 	}
-
-	fmt.Println(payload)
 
 	// Publish message
 	if err := mS.channel.publish(body, target); err != nil {

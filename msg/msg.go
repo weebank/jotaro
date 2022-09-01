@@ -2,12 +2,11 @@ package msg
 
 import (
 	"encoding/json"
-	"errors"
 )
 
 // Payload object
 type PayloadObject struct {
-	content []byte
+	Content []byte
 	Err     error
 }
 
@@ -22,13 +21,12 @@ func BuildPayloadObject(v any, err error) (PayloadObject, error) {
 
 // Unmarshal Payload Object
 func (pO PayloadObject) Bind(v any) error {
-	return json.Unmarshal(pO.content, v)
+	return json.Unmarshal(pO.Content, v)
 }
 
 // Message struct
 type Message struct {
 	id      string
-	err     error
 	origin  string
 	event   string
 	Payload map[string]PayloadObject
@@ -37,7 +35,6 @@ type Message struct {
 // Internal message struct
 type message struct {
 	ID      string
-	Err     string
 	Origin  string
 	Event   string
 	Payload map[string]PayloadObject
@@ -75,7 +72,6 @@ func (m Message) exportFields() message {
 // Import fields
 func (m *Message) importFields(M message) {
 	m.id = M.ID
-	m.err = errors.New(M.Err)
 	m.origin = M.Origin
 	m.event = M.Event
 	if M.Payload == nil {

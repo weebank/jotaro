@@ -2,6 +2,7 @@ package msg
 
 import (
 	"errors"
+	"fmt"
 	"runtime"
 )
 
@@ -32,11 +33,13 @@ func NewService(name string) (mS *MessagingService) {
 }
 
 // Publish Message Internal
-func publish(mS *MessagingService, target, event string, payload map[string]PayloadObject, msgErr error) error {
-	body, err := Message{err: msgErr, origin: mS.name, event: event, Payload: payload}.wrap()
+func publish(mS *MessagingService, target, event string, payload map[string]PayloadObject) error {
+	body, err := Message{origin: mS.name, event: event, Payload: payload}.wrap()
 	if err != nil {
 		return err
 	}
+
+	fmt.Println(payload)
 
 	// Publish message
 	if err := mS.channel.publish(body, target); err != nil {
@@ -56,12 +59,7 @@ func (mS *MessagingService) Publish(base Message, target, event string) error {
 		return errors.New("\"target\" cannot be empty")
 	}
 
-	// Build payload if needed
-	if base.Payload == nil {
-		base.Payload = make(map[string]PayloadObject)
-	}
-
-	return publish(mS, target, event, base.Payload, nil)
+	return publish(mS, target, event, base.Payload)
 }
 
 // Bind handler
@@ -82,6 +80,7 @@ func (mS *MessagingService) Consume() {
 					logger.WithError(err).WithField("message", m).Error("couldn't unwrap received message")
 					continue
 				}
+
 				// Call handler func
 				handler, ok := mS.handlers[m.event]
 				if !ok {

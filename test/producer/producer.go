@@ -40,15 +40,26 @@ func Main(count uint) {
 		wg.Add(1)
 
 		go func() {
-			// Build message
-			pokémon := shared.Pokémon{
-				Name: initialPokémons[rand.Intn(len(initialPokémons))],
+			// Generate Pokémon
+			pokémon := initialPokémons[rand.Intn(len(initialPokémons))]
+
+			// Build Payload Object
+			pO, _ := msg.BuildPayloadObject(shared.Pokémon{Name: pokémon}, nil)
+
+			// Build Message
+			msg := msg.Message{
+				Payload: map[string]msg.PayloadObject{
+					consumer.EventEvolvePokémon: pO,
+				},
 			}
-			err := comm.Publish(msg.Message{}, consumer.Service, consumer.EventEvolvePokémon, pokémon, nil)
+
+			// Publish message
+			err := comm.Publish(msg, consumer.Service, consumer.EventEvolvePokémon)
 			if err != nil {
 				logger.WithError(err).Error("error sending pokémon")
 			}
-			logger.WithField("pokémon", pokémon.Name).Info("sent")
+
+			logger.WithField("pokémon", pokémon).Info("sent")
 
 			wg.Done()
 		}()
@@ -60,7 +71,8 @@ func Main(count uint) {
 		func(m msg.Message) {
 			// Receive message from "consumer"
 			pokémon := new(shared.Pokémon)
-			m.Bind(pokémon)
+			pO, _ := m.CurrentPayloadObject()
+			pO.Bind(pokémon)
 
 			logger.WithField("pokémon", pokémon.Name).Info("received")
 		},

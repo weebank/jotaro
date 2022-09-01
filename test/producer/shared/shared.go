@@ -3,7 +3,7 @@ package shared
 const Service = "producer"
 
 const (
-	EventReceivePokémon = "receive_pokémon"
+	EventReceivePokémon = "receive-pokémon"
 )
 
 type Pokémon struct {

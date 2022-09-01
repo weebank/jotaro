@@ -30,17 +30,20 @@ func Main() {
 		func(m msg.Message) {
 			// Receive messages from "producer"
 			pokémon := new(producer.Pokémon)
-			m.Bind(pokémon)
+			pO, _ := m.CurrentPayloadObject()
+			pO.Bind(pokémon)
 
 			logger.WithField("pokémon", pokémon.Name).Info("received")
 
 			// Evolve pokémon
 			pokémon.Name = pokémonEvolutions[pokémon.Name]
+			pO, _ = msg.BuildPayloadObject(pokémon, nil)
+			m.Payload[producer.EventReceivePokémon] = pO
 
 			logger.WithField("pokémon", pokémon.Name).Info("sent")
 
 			// Prepare message to send it back to producer
-			comm.Publish(m, producer.Service, producer.EventReceivePokémon, pokémon, nil)
+			comm.Publish(m, producer.Service, producer.EventReceivePokémon)
 		},
 	)
 

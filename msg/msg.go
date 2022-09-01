@@ -5,26 +5,24 @@ import (
 	"errors"
 )
 
-// Message interface
-type forwardableMessage interface {
-	toForwardableMessage() (*Message, error)
-}
-
 // Payload object
-type payloadObject struct {
-	Content []byte
+type PayloadObject struct {
+	content []byte
 	Err     error
 }
 
-// Initialize Payload Object
-func newPayloadObject(v any, err error) (*payloadObject, error) {
-	// Marshal content
-	body, errMarshal := json.Marshal(v)
-	if errMarshal != nil {
-		return nil, err
+// Unmarshal Payload Object
+func BuildPayloadObject(v any, err error) (PayloadObject, error) {
+	if content, errMarshal := json.Marshal(v); errMarshal != nil {
+		return PayloadObject{}, errMarshal
+	} else {
+		return PayloadObject{content, err}, nil
 	}
+}
 
-	return &payloadObject{Content: body, Err: err}, nil
+// Unmarshal Payload Object
+func (pO PayloadObject) Bind(v any) error {
+	return json.Unmarshal(pO.content, v)
 }
 
 // Message struct
@@ -33,29 +31,7 @@ type Message struct {
 	err     error
 	origin  string
 	event   string
-	target  string
-	payload map[string]payloadObject
-}
-
-// Message to Forwardable Message
-func (m Message) toForwardableMessage() (*Message, error) {
-	return &m, nil
-}
-
-// Message (with Payload) struct
-type StatefulMessage struct {
-	Event   string
-	Content any
-	Err     error
-}
-
-// Message to Forwardable Message
-func (sM StatefulMessage) toForwardableMessage() (*Message, error) {
-	pO, err := newPayloadObject(sM.Content, sM.Err)
-	if err != nil {
-		return nil, err
-	}
-	return &Message{event: sM.Event, payload: map[string]payloadObject{sM.Event: *pO}}, nil
+	Payload map[string]PayloadObject
 }
 
 // Internal message struct
@@ -64,7 +40,13 @@ type message struct {
 	Err     string
 	Origin  string
 	Event   string
-	Payload map[string]payloadObject
+	Payload map[string]PayloadObject
+}
+
+// Bind Payload Object related to current event
+func (m Message) CurrentPayloadObject() (PayloadObject, bool) {
+	pO, ok := m.Payload[m.event]
+	return pO, ok
 }
 
 // Get ID
@@ -82,29 +64,12 @@ func (m Message) Event() string {
 	return m.event
 }
 
-// Forward Message
-func (m *Message) Forward(event, target string) {
-	m.event = event
-	m.target = target
-}
-
-// Bind payload object related to current event
-func (m Message) Bind(v any) error {
-	return m.BindPrevious(m.event, v)
-}
-
-// Bind payload object
-func (m Message) BindPrevious(event string, v any) error {
-	err := json.Unmarshal(m.payload[event].Content, v)
-	if err != nil {
-		return err
-	}
-	return m.payload[event].Err
-}
-
 // Export fields
 func (m Message) exportFields() message {
-	return message{ID: m.id, Origin: m.origin, Event: m.event, Payload: m.payload}
+	if m.Payload == nil {
+		m.Payload = make(map[string]PayloadObject)
+	}
+	return message{ID: m.id, Origin: m.origin, Event: m.event, Payload: m.Payload}
 }
 
 // Import fields
@@ -113,7 +78,11 @@ func (m *Message) importFields(M message) {
 	m.err = errors.New(M.Err)
 	m.origin = M.Origin
 	m.event = M.Event
-	m.payload = M.Payload
+	if M.Payload == nil {
+		m.Payload = make(map[string]PayloadObject)
+	} else {
+		m.Payload = M.Payload
+	}
 }
 
 // Wrap Message
@@ -137,6 +106,6 @@ func unwrap(body []byte) (m Message, err error) {
 }
 
 // Build response event
-func ResponseEvent(event, service string) string {
-	return event + "-" + service
+func ResponseEvent(event string) string {
+	return event + "-" + "response"
 }

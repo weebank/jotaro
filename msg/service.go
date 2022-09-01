@@ -32,8 +32,8 @@ func NewService(name string) (mS *MessagingService) {
 }
 
 // Publish Message Internal
-func publish(mS *MessagingService, target, event string, payload map[string]payloadObject, msgErr error) error {
-	body, err := Message{err: msgErr, origin: mS.name, event: event, payload: payload}.wrap()
+func publish(mS *MessagingService, target, event string, payload map[string]PayloadObject, msgErr error) error {
+	body, err := Message{err: msgErr, origin: mS.name, event: event, Payload: payload}.wrap()
 	if err != nil {
 		return err
 	}
@@ -47,42 +47,21 @@ func publish(mS *MessagingService, target, event string, payload map[string]payl
 }
 
 // Publish Message
-func (mS *MessagingService) Publish(base forwardableMessage, target, event string, content any, err ...error) error {
+func (mS *MessagingService) Publish(base Message, target, event string) error {
 	// Check validity of event and target
 	if event == "" {
-		return errors.New("\"event\" cannot be blank")
+		return errors.New("\"event\" cannot be empty")
 	}
 	if target == "" {
-		return errors.New("\"to\" cannot be blank")
-	}
-
-	// Get message
-	msg, errMarshal := base.toForwardableMessage()
-	if errMarshal != nil {
-		return nil
+		return errors.New("\"target\" cannot be empty")
 	}
 
 	// Build payload if needed
-	if msg.payload == nil {
-		msg.payload = make(map[string]payloadObject)
+	if base.Payload == nil {
+		base.Payload = make(map[string]PayloadObject)
 	}
 
-	// Treat error
-	var errSingle error
-	if len(err) > 0 {
-		errSingle = err[0]
-	}
-
-	// Build payload object
-	pO, errMarshal := newPayloadObject(content, errSingle)
-	if errMarshal != nil {
-		return errMarshal
-	}
-
-	// Append to payload
-	msg.payload[event] = *pO
-
-	return publish(mS, target, event, msg.payload, nil)
+	return publish(mS, target, event, base.Payload, nil)
 }
 
 // Bind handler

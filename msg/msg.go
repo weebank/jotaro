@@ -7,7 +7,7 @@ import (
 // Payload object
 type PayloadObject struct {
 	Content []byte
-	Err     error
+	Err     string
 }
 
 // Unmarshal Payload Object
@@ -15,7 +15,7 @@ func BuildPayloadObject(v any, err error) (PayloadObject, error) {
 	if content, errMarshal := json.Marshal(v); errMarshal != nil {
 		return PayloadObject{}, errMarshal
 	} else {
-		return PayloadObject{content, err}, nil
+		return PayloadObject{content, err.Error()}, nil
 	}
 }
 

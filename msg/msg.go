@@ -41,7 +41,7 @@ type message struct {
 }
 
 // Bind Payload Object related to current event
-func (m Message) CurrentPayloadObject() (PayloadObject, bool) {
+func (m Message) CurrentPayload() (PayloadObject, bool) {
 	pO, ok := m.Payload[m.event]
 	return pO, ok
 }

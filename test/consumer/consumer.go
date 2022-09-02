@@ -30,7 +30,7 @@ func Main() {
 		func(m msg.Message) {
 			// Receive messages from "producer"
 			pokémon := new(producer.Pokémon)
-			pO, _ := m.CurrentPayloadObject()
+			pO, _ := m.CurrentPayload()
 			pO.Bind(pokémon)
 
 			logger.WithField("pokémon", pokémon.Name).Info("received")

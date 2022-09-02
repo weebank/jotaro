@@ -71,7 +71,7 @@ func Main(count uint) {
 		func(m msg.Message) {
 			// Receive message from "consumer"
 			pokémon := new(shared.Pokémon)
-			pO, _ := m.CurrentPayloadObject()
+			pO, _ := m.CurrentPayload()
 			pO.Bind(pokémon)
 
 			logger.WithField("pokémon", pokémon.Name).Info("received")

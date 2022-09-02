@@ -15,7 +15,11 @@ func BuildPayloadObject(v any, err error) (PayloadObject, error) {
 	if content, errMarshal := json.Marshal(v); errMarshal != nil {
 		return PayloadObject{}, errMarshal
 	} else {
-		return PayloadObject{content, err.Error()}, nil
+		if err != nil {
+			return PayloadObject{content, err.Error()}, nil
+		} else {
+			return PayloadObject{content, ""}, nil
+		}
 	}
 }
 

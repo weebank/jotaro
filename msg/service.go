@@ -7,9 +7,10 @@ import (
 
 // Messaging Service
 type MessagingService struct {
-	name     string
-	channel  Channel
-	handlers map[string]func(m Message)
+	name      string
+	channel   Channel
+	handlers  map[string]func(m Message)
+	DebugMode bool
 }
 
 // Initialize Messaging Service
@@ -71,6 +72,10 @@ func (mS *MessagingService) Consume() {
 		go func(i int) {
 			// Consume queue
 			for msg := range mS.channel.consumeQueue(mS.name) {
+				// Show message if in debug mode
+				if mS.DebugMode {
+					logger.WithField("message", msg).Info("received")
+				}
 				// Unwrap message
 				m, err := unwrap(msg.Body)
 				if err != nil {

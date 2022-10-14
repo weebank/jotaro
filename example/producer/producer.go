@@ -8,9 +8,9 @@ import (
 
 	apexLogger "github.com/apex/log"
 	"github.com/apex/log/handlers/cli"
+	consumer "github.com/weebank/jotaro/example/consumer/shared"
+	"github.com/weebank/jotaro/example/producer/shared"
 	"github.com/weebank/jotaro/msg"
-	consumer "github.com/weebank/jotaro/test/consumer/shared"
-	"github.com/weebank/jotaro/test/producer/shared"
 )
 
 var logger = apexLogger.Logger{

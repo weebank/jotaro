@@ -3,8 +3,8 @@ package main
 import (
 	"flag"
 
-	"github.com/weebank/jotaro/test/consumer"
-	"github.com/weebank/jotaro/test/producer"
+	"github.com/weebank/jotaro/example/consumer"
+	"github.com/weebank/jotaro/example/producer"
 )
 
 func main() {

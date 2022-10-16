@@ -6,6 +6,8 @@ import (
 
 type PayloadObject []byte
 
+type EmptyPayloadObject struct{}
+
 // Unmarshal Payload Object
 func NewPayloadObject(v any) (PayloadObject, error) {
 	if content, errMarshal := json.Marshal(v); errMarshal != nil {
@@ -84,11 +86,6 @@ func (m Message) wrap() ([]byte, error) {
 		return nil, err
 	}
 	return v, nil
-}
-
-// Bind Nil Payload Object
-func (m Message) BindEmptyPayload() {
-	m.Payload[ResponseEvent(m.event)] = make([]byte, 0)
 }
 
 // Unwrap Message

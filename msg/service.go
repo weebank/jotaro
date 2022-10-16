@@ -39,6 +39,11 @@ func publish(mS *MessagingService, target, event string, payload map[string]Payl
 		return err
 	}
 
+	// Show message if in debug mode
+	if mS.DebugMode {
+		logger.WithField("message", body).Info("published")
+	}
+
 	// Publish message
 	if err := mS.channel.publish(body, target); err != nil {
 		return err
@@ -72,15 +77,16 @@ func (mS *MessagingService) Consume() {
 		go func(i int) {
 			// Consume queue
 			for msg := range mS.channel.consumeQueue(mS.name) {
-				// Show message if in debug mode
-				if mS.DebugMode {
-					logger.WithField("message", msg).Info("received")
-				}
 				// Unwrap message
 				m, err := unwrap(msg.Body)
 				if err != nil {
 					logger.WithError(err).WithField("message", m).Error("couldn't unwrap received message")
 					continue
+				}
+
+				// Show message if in debug mode
+				if mS.DebugMode {
+					logger.WithField("message", m).Info("received")
 				}
 
 				// Call handler func

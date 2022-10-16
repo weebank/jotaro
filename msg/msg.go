@@ -63,9 +63,9 @@ type Message struct {
 
 // Internal message struct
 type message struct {
-	Origin  string
-	Event   string
-	Payload map[string]payloadObject
+	Origin  string                   `json:"origin"`
+	Event   string                   `json:"event"`
+	Payload map[string]payloadObject `json:"payload"`
 }
 
 // Bind Payload Object related to current event

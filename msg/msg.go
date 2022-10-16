@@ -31,10 +31,19 @@ func (pO *PayloadObject) importFields(p payloadObject) {
 
 // Unmarshal Payload Object
 func NewPayloadObject(v any) (PayloadObject, error) {
-	if content, errMarshal := json.Marshal(v); errMarshal != nil {
+	var content []byte
+	var errMarshal error
+
+	err, isError := v.(error)
+	if isError {
+		content, errMarshal = json.Marshal(err.Error())
+	} else {
+		content, errMarshal = json.Marshal(v)
+	}
+
+	if errMarshal != nil {
 		return PayloadObject{}, errMarshal
 	} else {
-		_, isError := v.(error)
 		return PayloadObject{content, isError}, nil
 	}
 }

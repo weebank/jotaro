@@ -43,6 +43,7 @@ func Main(count uint) {
 			// Generate Pokémon
 			pokémon := initialPokémons[rand.Intn(len(initialPokémons))]
 
+			// Build Payload Object
 			pO, _ := msg.NewPayloadObject(shared.Pokémon{Name: pokémon})
 
 			// Build Message
@@ -53,8 +54,7 @@ func Main(count uint) {
 			}
 
 			// Publish message
-			err := comm.Publish(msg, consumer.Service, consumer.EventEvolvePokémon)
-			if err != nil {
+			if err := comm.Publish(msg, consumer.Service, consumer.EventEvolvePokémon); err != nil {
 				logger.WithError(err).Error("error sending pokémon")
 			}
 

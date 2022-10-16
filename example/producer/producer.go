@@ -35,7 +35,7 @@ func Main(count uint) {
 	// pokémons only after they were sent
 	wg := sync.WaitGroup{}
 
-	// Send messages to "pokémons"
+	// Send messages to "consumer"
 	for i := 0; i < int(count); i++ {
 		wg.Add(1)
 
@@ -66,7 +66,7 @@ func Main(count uint) {
 	wg.Wait()
 
 	// Set handler
-	comm.On(shared.EventReceivePokémon,
+	comm.On(msg.ResponseEvent(consumer.EventEvolvePokémon),
 		func(m msg.Message) any {
 			// Receive message from "consumer"
 			pokémon := new(shared.Pokémon)

@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 )
 
+// Payload Object struct
 type PayloadObject struct {
 	content []byte
 	isError bool
@@ -11,10 +12,27 @@ type PayloadObject struct {
 
 type EmptyPayloadObject struct{}
 
+// Internal Payload Object struct
+type payloadObject struct {
+	Content []byte `json:"content"`
+	IsError bool   `json:"isError"`
+}
+
+// Export fields
+func (pO PayloadObject) exportFields() payloadObject {
+	return payloadObject{Content: pO.content, IsError: pO.isError}
+}
+
+// Import fields
+func (pO *PayloadObject) importFields(p payloadObject) {
+	pO.content = p.Content
+	pO.isError = p.IsError
+}
+
 // Unmarshal Payload Object
 func NewPayloadObject(v any) (PayloadObject, error) {
 	if content, errMarshal := json.Marshal(v); errMarshal != nil {
-		return PayloadObject{make([]byte, 0), false}, errMarshal
+		return PayloadObject{}, errMarshal
 	} else {
 		_, isError := v.(error)
 		return PayloadObject{content, isError}, nil
@@ -47,7 +65,7 @@ type Message struct {
 type message struct {
 	Origin  string
 	Event   string
-	Payload map[string]PayloadObject
+	Payload map[string]payloadObject
 }
 
 // Bind Payload Object related to current event
@@ -68,10 +86,19 @@ func (m Message) Event() string {
 
 // Export fields
 func (m Message) exportFields() message {
+	// Ensure Payload is not nil
 	if m.Payload == nil {
 		m.Payload = make(map[string]PayloadObject)
 	}
-	return message{Origin: m.origin, Event: m.event, Payload: m.Payload}
+
+	// Export Payload Objects
+	exportedPOs := make(map[string]payloadObject)
+	for k, v := range m.Payload {
+		exportedPOs[k] = v.exportFields()
+	}
+
+	// Export Message
+	return message{Origin: m.origin, Event: m.event, Payload: exportedPOs}
 }
 
 // Import fields
@@ -81,7 +108,14 @@ func (m *Message) importFields(M message) {
 	if M.Payload == nil {
 		m.Payload = make(map[string]PayloadObject)
 	} else {
-		m.Payload = M.Payload
+		// Import Payload Objects
+		importedPOs := make(map[string]PayloadObject)
+		for k, v := range M.Payload {
+			pO := PayloadObject{}
+			pO.importFields(v)
+			importedPOs[k] = pO
+		}
+		m.Payload = importedPOs
 	}
 }
 

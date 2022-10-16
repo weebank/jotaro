@@ -34,14 +34,16 @@ func NewService(name string) (mS *MessagingService) {
 
 // Publish Message Internal
 func publish(mS *MessagingService, target, event string, payload map[string]PayloadObject) error {
-	body, err := Message{origin: mS.name, event: event, Payload: payload}.wrap()
+	// Create message
+	msg := Message{origin: mS.name, event: event, Payload: payload}
+	body, err := msg.wrap()
 	if err != nil {
 		return err
 	}
 
 	// Show message if in debug mode
 	if mS.DebugMode {
-		logger.WithField("message", body).Info("published")
+		logger.WithField("message", msg).Info("published")
 	}
 
 	// Publish message

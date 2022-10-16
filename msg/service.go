@@ -9,7 +9,7 @@ import (
 type MessagingService struct {
 	name      string
 	channel   Channel
-	handlers  map[string]func(m Message)
+	handlers  map[string]func(m Message) any
 	DebugMode bool
 }
 
@@ -27,7 +27,7 @@ func NewService(name string) (mS *MessagingService) {
 	mS.channel.newQueue(mS.name)
 
 	// Add handlers, callbacks and subscriptions
-	mS.handlers = make(map[string]func(m Message))
+	mS.handlers = make(map[string]func(m Message) any)
 
 	return
 }
@@ -61,7 +61,7 @@ func (mS *MessagingService) Publish(base Message, target, event string) error {
 }
 
 // Bind handler
-func (mS *MessagingService) On(event string, function func(m Message)) {
+func (mS *MessagingService) On(event string, function func(m Message) any) {
 	mS.handlers[event] = function
 }
 
@@ -91,7 +91,14 @@ func (mS *MessagingService) Consume() {
 				}
 
 				// Store event and call handler
-				handler(m)
+				if response := handler(m); response != nil {
+					// Create response event name
+					event := ResponseEvent(m.event)
+					// Build payload object
+					m.Payload[event], _ = NewPayloadObject(response)
+					// Publish response
+					mS.Publish(m, m.Origin(), event)
+				}
 
 				// Acknowledge
 				msg.Ack(false)

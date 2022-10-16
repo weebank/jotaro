@@ -27,7 +27,7 @@ func Main() {
 
 	// Set handler
 	comm.On(shared.EventEvolvePokémon,
-		func(m msg.Message) {
+		func(m msg.Message) any {
 			// Receive messages from "producer"
 			pokémon := new(producer.Pokémon)
 			pO, _ := m.CurrentPayload()
@@ -37,13 +37,10 @@ func Main() {
 
 			// Evolve pokémon
 			pokémon.Name = pokémonEvolutions[pokémon.Name]
-			pO, _ = msg.NewPayloadObject(pokémon)
-			m.Payload[producer.EventReceivePokémon] = pO
 
 			logger.WithField("pokémon", pokémon.Name).Info("sent")
 
-			// Prepare message to send it back to producer
-			comm.Publish(m, producer.Service, producer.EventReceivePokémon)
+			return pokémon
 		},
 	)
 

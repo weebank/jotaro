@@ -86,6 +86,11 @@ func (m Message) wrap() ([]byte, error) {
 	return v, nil
 }
 
+// Bind Nil Payload Object
+func (m Message) BindEmptyPayload() {
+	m.Payload[ResponseEvent(m.event)] = make([]byte, 0)
+}
+
 // Unwrap Message
 func unwrap(body []byte) (m Message, err error) {
 	M := message{}

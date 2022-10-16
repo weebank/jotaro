@@ -67,13 +67,15 @@ func Main(count uint) {
 
 	// Set handler
 	comm.On(shared.EventReceivePokémon,
-		func(m msg.Message) {
+		func(m msg.Message) any {
 			// Receive message from "consumer"
 			pokémon := new(shared.Pokémon)
 			pO, _ := m.CurrentPayload()
 			pO.Bind(pokémon)
 
 			logger.WithField("pokémon", pokémon.Name).Info("received")
+
+			return nil
 		},
 	)
 

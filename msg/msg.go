@@ -4,28 +4,20 @@ import (
 	"encoding/json"
 )
 
-// Payload object
-type PayloadObject struct {
-	Content []byte
-	Err     string
-}
+type PayloadObject []byte
 
 // Unmarshal Payload Object
-func BuildPayloadObject(v any, err error) (PayloadObject, error) {
+func NewPayloadObject(v any) (PayloadObject, error) {
 	if content, errMarshal := json.Marshal(v); errMarshal != nil {
-		return PayloadObject{}, errMarshal
+		return make([]byte, 0), errMarshal
 	} else {
-		if err != nil {
-			return PayloadObject{content, err.Error()}, nil
-		} else {
-			return PayloadObject{content, ""}, nil
-		}
+		return content, nil
 	}
 }
 
 // Unmarshal Payload Object
 func (pO PayloadObject) Bind(v any) error {
-	return json.Unmarshal(pO.Content, v)
+	return json.Unmarshal(pO, v)
 }
 
 // Message struct

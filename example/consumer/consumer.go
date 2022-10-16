@@ -37,7 +37,7 @@ func Main() {
 
 			// Evolve pokémon
 			pokémon.Name = pokémonEvolutions[pokémon.Name]
-			pO, _ = msg.BuildPayloadObject(pokémon, nil)
+			pO, _ = msg.NewPayloadObject(pokémon)
 			m.Payload[producer.EventReceivePokémon] = pO
 
 			logger.WithField("pokémon", pokémon.Name).Info("sent")

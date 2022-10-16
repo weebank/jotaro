@@ -43,8 +43,7 @@ func Main(count uint) {
 			// Generate Pokémon
 			pokémon := initialPokémons[rand.Intn(len(initialPokémons))]
 
-			// Build Payload Object
-			pO, _ := msg.BuildPayloadObject(shared.Pokémon{Name: pokémon}, nil)
+			pO, _ := msg.NewPayloadObject(shared.Pokémon{Name: pokémon})
 
 			// Build Message
 			msg := msg.Message{

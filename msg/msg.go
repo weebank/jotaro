@@ -2,6 +2,7 @@ package msg
 
 import (
 	"encoding/json"
+	"errors"
 )
 
 // Payload Object struct
@@ -51,9 +52,12 @@ func NewPayloadObject(v any) (PayloadObject, error) {
 // Extract Error From Payload Object
 func (pO PayloadObject) AsError() error {
 	if pO.isError {
-		var err error
-		pO.Bind(&err)
-		return err
+		str := ""
+		if err := json.Unmarshal(pO.content, &str); err != nil {
+			return err
+		} else {
+			return errors.New(str)
+		}
 	}
 	return nil
 }
